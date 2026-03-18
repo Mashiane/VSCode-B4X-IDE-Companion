@@ -338,7 +338,7 @@
     "@types/node": "^20.17.30",
     "@types/vscode": "^1.95.0",
     "typescript": "^5.8.2",
-    "electron-rebuild": "^3.3.6"
+    "electron-rebuild": "^3.2.9"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1",
