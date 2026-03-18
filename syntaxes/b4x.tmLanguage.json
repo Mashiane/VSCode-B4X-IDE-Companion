@@ -1,0 +1,109 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "B4X",
+  "scopeName": "source.b4x",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#sub-declarations" },
+    { "include": "#type-annotations" },
+    { "include": "#keywords" },
+    { "include": "#constants" },
+    { "include": "#numbers" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.apostrophe.b4x",
+          "match": "'.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.b4x",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.b4x",
+              "match": "\"\""
+            }
+          ]
+        }
+      ]
+    },
+    "sub-declarations": {
+      "patterns": [
+        {
+          "begin": "(?i)\\b(Sub)\\b\\s+",
+          "beginCaptures": {
+            "1": {
+              "name": "storage.type.function.b4x"
+            }
+          },
+          "end": "(?=$|\\(|')",
+          "patterns": [
+            {
+              "name": "entity.name.function.b4x",
+              "match": "[A-Za-z_][A-Za-z0-9_]*"
+            }
+          ]
+        }
+      ]
+    },
+    "type-annotations": {
+      "patterns": [
+        {
+          "begin": "(?i)\\b(As)\\b\\s+",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.operator.word.b4x"
+            }
+          },
+          "end": "(?=$|,|\\)|=|')",
+          "patterns": [
+            {
+              "name": "storage.type.b4x",
+              "match": "[A-Za-z_][A-Za-z0-9_\\.]*"
+            }
+          ]
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.b4x",
+          "match": "(?i)\\b(?:If|Then|Else|For|Next|Each|Do|While|Loop|Select|Case|Try|Catch|Return)\\b"
+        },
+        {
+          "name": "keyword.control.conditional.b4x",
+          "match": "(?i)\\b(?:Else\\s+If|End\\s+If|End\\s+Select|End\\s+Try|End\\s+Sub)\\b"
+        },
+        {
+          "name": "storage.modifier.b4x",
+          "match": "(?i)\\b(?:Dim|Private|Public|Type|Sub|Class_Globals|Process_Globals)\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.b4x",
+          "match": "(?i)\\b(?:True|False)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.b4x",
+          "match": "\\b(?:0x[0-9A-Fa-f]+|\\d+(?:\\.\\d+)?)\\b"
+        }
+      ]
+    }
+  }
+}

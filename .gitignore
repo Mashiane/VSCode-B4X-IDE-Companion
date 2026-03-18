@@ -1,0 +1,42 @@
+# Node dependencies
+node_modules/
+
+# Build output
+dist/
+*.vsix
+
+# VS Code / editor
+.vscode/
+.vscode-test/
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Operating system
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Archive of legacy code not used by the extension
+irrelevant/
+
+# Indexer tests and CLI helpers (not required to build/install extension)
+server/indexer/tests/
+server/indexer/inspect-index.js
+node_modules/
+dist/
+*.vsix
+.vscode-test/

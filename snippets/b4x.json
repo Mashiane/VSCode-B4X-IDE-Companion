@@ -1,0 +1,144 @@
+{
+  "Sub": {
+    "prefix": "sub",
+    "body": [
+      "Sub ${1:Name}(${2:Args})",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "Create a subroutine"
+  },
+  "Event Sub": {
+    "prefix": "eventsub",
+    "body": [
+      "Sub ${1:Control}_${2:Event}(${3:Args})",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "Create an event subroutine"
+  },
+  "If": {
+    "prefix": "if",
+    "body": [
+      "If ${1:condition} Then",
+      "\t$0",
+      "End If"
+    ],
+    "description": "Create an If block"
+  },
+  "If Else": {
+    "prefix": "ife",
+    "body": [
+      "If ${1:condition} Then",
+      "\t${2}",
+      "Else",
+      "\t$0",
+      "End If"
+    ],
+    "description": "Create an If / Else block"
+  },
+  "Select Case": {
+    "prefix": "select",
+    "body": [
+      "Select ${1:value}",
+      "\tCase ${2:match}",
+      "\t\t$0",
+      "\tCase Else",
+      "\t\t",
+      "End Select"
+    ],
+    "description": "Create a Select / Case block"
+  },
+  "For": {
+    "prefix": "for",
+    "body": [
+      "For ${1:i} = ${2:0} To ${3:10}",
+      "\t$0",
+      "Next"
+    ],
+    "description": "Create a For / Next loop"
+  },
+  "For Each": {
+    "prefix": "foreach",
+    "body": [
+      "For Each ${1:item} As ${2:Object} In ${3:Items}",
+      "\t$0",
+      "Next"
+    ],
+    "description": "Create a For Each loop"
+  },
+  "Do While": {
+    "prefix": "dowhile",
+    "body": [
+      "Do While ${1:condition}",
+      "\t$0",
+      "Loop"
+    ],
+    "description": "Create a Do While / Loop block"
+  },
+  "Type": {
+    "prefix": "type",
+    "body": [
+      "Type ${1:Name}(${2:Field1 As String, Field2 As Int})"
+    ],
+    "description": "Create a custom type declaration"
+  },
+  "Dim": {
+    "prefix": "dim",
+    "body": [
+      "Dim ${1:name} As ${2:String}"
+    ],
+    "description": "Create a local variable declaration"
+  },
+  "Private": {
+    "prefix": "private",
+    "body": [
+      "Private ${1:name} As ${2:String}"
+    ],
+    "description": "Create a private variable declaration"
+  },
+  "Public": {
+    "prefix": "public",
+    "body": [
+      "Public ${1:name} As ${2:String}"
+    ],
+    "description": "Create a public variable declaration"
+  },
+  "Class Globals": {
+    "prefix": "classglobals",
+    "body": [
+      "Sub Class_Globals",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "Create a Class_Globals block"
+  },
+  "Process Globals": {
+    "prefix": "processglobals",
+    "body": [
+      "Sub Process_Globals",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "Create a Process_Globals block"
+  },
+  "Try Catch": {
+    "prefix": "try",
+    "body": [
+      "Try",
+      "\t${1}",
+      "Catch",
+      "\tLog(LastException)",
+      "\t$0",
+      "End Try"
+    ],
+    "description": "Create a Try / Catch / End Try block"
+  },
+  "Log": {
+    "prefix": "log",
+    "body": [
+      "Log(${1:\"value: \" & value})"
+    ],
+    "description": "Log a value or expression"
+  }
+}

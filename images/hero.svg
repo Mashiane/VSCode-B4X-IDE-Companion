@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <rect width="1280" height="640" fill="#071426" />
+  <g fill="#0b5fff" font-family="Arial, Helvetica, sans-serif">
+    <text x="80" y="160" font-size="64">B4X IntelliSense</text>
+    <text x="80" y="240" font-size="28" fill="#9fbfff">Completions · Hover · Extract Method · Workspace Indexing</text>
+  </g>
+</svg>
