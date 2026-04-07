@@ -36,7 +36,7 @@ try {
         completionProvider: { resolveProvider: false },
         hoverProvider: true,
         definitionProvider: true,
-        documentFormattingProvider: false,
+        renameProvider: { prepareProvider: true },
         semanticTokensProvider: {
           legend: { tokenTypes: [], tokenModifiers: [] },
           range: false,

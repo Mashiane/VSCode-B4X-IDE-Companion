@@ -2,7 +2,7 @@
   "name": "b4x-intellisense",
   "displayName": "VS Code B4X IDE Companion",
   "description": "Comprehensive IDE companion for the B4X family (B4A, B4i, B4J, B4R). Provides a complete developer toolkit for Visual Studio Code including a local LSP backend and fast workspace indexer with optional prebuilt API index. Delivers advanced language features (contextual completions, hover, go-to-definition, rename, signature help), cross-file type inference, persistent on-disk indexing with safe atomic writes and migrations, XML and library discovery, project-aware configuration via .b4a/.b4i/.b4j/.b4r files, and server-side refactor actions (Extract Method with preview). Includes diagnostics, code actions, platform INI/theme import, VS Code commands for project management, and an offline-first design that gracefully falls back to live workspace and installed libraries when a bundled API index is not present.",
-  "version": "0.1.258",
+  "version": "0.1.261",
   "publisher": "AneleMbangaMashy",
   "engines": {
     "vscode": "^1.95.0"
@@ -33,47 +33,142 @@
       {
         "command": "b4xIntellisense.openB4xProject",
         "title": "Open B4X Project...",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.gotoDefinition",
+        "title": "Go to Definition",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.findReferences",
+        "title": "Find All References",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.renameSymbol",
+        "title": "Rename Symbol",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.formatDocument",
+        "title": "Format Document",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.triggerSuggest",
+        "title": "Trigger Suggestions",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.triggerParameterHints",
+        "title": "Parameter Hints",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.gotoSymbol",
+        "title": "Go to Symbol in File",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.searchOnline",
+        "title": "Search Online",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.peekDefinition",
+        "title": "Peek Definition",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.quickFix",
+        "title": "Quick Fix",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.unformatDocument",
+        "title": "Un-Format Document",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.removeBlankLines",
+        "title": "Remove Blank Lines",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.removeComments",
+        "title": "Remove Comments",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.formatSelection",
+        "title": "Format Selection",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.gotoImplementation",
+        "title": "Go to Implementation",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.gotoTypeDefinition",
+        "title": "Go to Type Definition",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.unformatSelection",
+        "title": "Un-Format Selection",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.blockComment",
+        "title": "Block Comment",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.unblockComment",
+        "title": "Un-Block Comment",
+        "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.importThemeFromInstall",
         "title": "B4X: Import Theme From B4X Install",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.openSettings",
         "title": "B4X: Open Extension Settings",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.openDocs",
         "title": "B4X: Open Documentation",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.openB4X",
         "title": "B4X: Open B4X Website",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.installProject",
         "title": "B4X: Build & Install Project (B4A / B4J)",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.captureGif",
         "title": "B4X: Capture GIF from Device",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.captureScreenshots",
         "title": "B4X: Capture Screenshots (Scroll)",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.runDiagnostics",
         "title": "B4X: Run All Diagnostics",
-        "category": "B4X IntelliSense"
+        "category": "B4X Companion"
       }
     ],
     "languages": [
@@ -110,16 +205,123 @@
         "path": "./snippets/b4x.json"
       }
     ],
+    "submenus": [
+      {
+        "id": "b4xIntellisense.submenu",
+        "label": "B4X Companion"
+      }
+    ],
     "menus": {
+      "editor/context": [
+        {
+          "submenu": "b4xIntellisense.submenu",
+          "group": "b4x@1",
+          "when": "editorLangId == b4x"
+        }
+      ],
+      "b4xIntellisense.submenu": [
+        {
+          "command": "b4xIntellisense.gotoDefinition",
+          "group": "1_nav@1"
+        },
+        {
+          "command": "b4xIntellisense.peekDefinition",
+          "group": "1_nav@2"
+        },
+        {
+          "command": "b4xIntellisense.findReferences",
+          "group": "1_nav@3"
+        },
+        {
+          "command": "b4xIntellisense.renameSymbol",
+          "group": "1_nav@4"
+        },
+        {
+          "command": "b4xIntellisense.gotoSymbol",
+          "group": "1_nav@5"
+        },
+        {
+          "command": "b4xIntellisense.gotoImplementation",
+          "group": "1_nav@6"
+        },
+        {
+          "command": "b4xIntellisense.gotoTypeDefinition",
+          "group": "1_nav@7"
+        },
+        {
+          "command": "b4xIntellisense.formatDocument",
+          "group": "2_fmtDoc@1"
+        },
+        {
+          "command": "b4xIntellisense.unformatDocument",
+          "group": "2_fmtDoc@2"
+        },
+        {
+          "command": "b4xIntellisense.formatSelection",
+          "group": "3_fmtSel@1"
+        },
+        {
+          "command": "b4xIntellisense.unformatSelection",
+          "group": "3_fmtSel@2"
+        },
+        {
+          "command": "b4xIntellisense.blockComment",
+          "group": "4_comment@1"
+        },
+        {
+          "command": "b4xIntellisense.unblockComment",
+          "group": "4_comment@2"
+        },
+        {
+          "command": "b4xIntellisense.removeBlankLines",
+          "group": "5_cleanup@1"
+        },
+        {
+          "command": "b4xIntellisense.removeComments",
+          "group": "5_cleanup@2"
+        },
+        {
+          "command": "b4xIntellisense.quickFix",
+          "group": "6_tools@1"
+        },
+        {
+          "command": "b4xIntellisense.triggerSuggest",
+          "group": "6_tools@2"
+        },
+        {
+          "command": "b4xIntellisense.triggerParameterHints",
+          "group": "6_tools@3"
+        },
+        {
+          "command": "b4xIntellisense.searchOnline",
+          "group": "7_external@1"
+        }
+      ],
       "file/menu": [
         {
           "command": "b4xIntellisense.openB4xProject",
-          "group": "1_open@20"
+          "group": "1_open@10"
         },
         {
           "command": "b4xIntellisense.installProject",
           "when": "b4x.hasBuildableProject",
-          "group": "1_open@30"
+          "group": "1_open@20"
+        },
+        {
+          "command": "b4xIntellisense.formatDocument",
+          "group": "2_edit@10"
+        },
+        {
+          "command": "b4xIntellisense.openDocs",
+          "group": "3_help@10"
+        },
+        {
+          "command": "b4xIntellisense.importThemeFromInstall",
+          "group": "4_tools@10"
+        },
+        {
+          "command": "b4xIntellisense.runDiagnostics",
+          "group": "4_tools@20"
         }
       ],
       "explorer/context": [
@@ -150,6 +352,82 @@
         },
         {
           "command": "b4xIntellisense.openSettings"
+        },
+        {
+          "command": "b4xIntellisense.gotoDefinition",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.peekDefinition",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.findReferences",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.renameSymbol",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.gotoSymbol",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.searchOnline",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.formatDocument",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.unformatDocument",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.removeBlankLines",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.removeComments",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.formatSelection",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.gotoImplementation",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.gotoTypeDefinition",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.unformatSelection",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.blockComment",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.unblockComment",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.quickFix",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.triggerSuggest",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.triggerParameterHints",
+          "when": "false"
         }
       ]
     },
@@ -161,7 +439,7 @@
       }
     ],
     "configuration": {
-      "title": "B4X IntelliSense",
+      "title": "B4X Companion",
       "properties": {
         "b4xIntellisense.b4aIniPath": {
           "type": "string",
@@ -316,6 +594,7 @@
     "@mermaid-js/mermaid-cli": "^11.12.0",
     "@types/node": "^20.17.30",
     "@types/vscode": "^1.95.0",
+    "docx": "^9.6.1",
     "electron-rebuild": "^3.2.9",
     "typescript": "^5.8.2"
   },
