@@ -2,6 +2,7 @@
 // LSP server for B4X IntelliSense (cleaned, with logging and persistence hooks)
 try {
   const { createConnection, TextDocuments, ProposedFeatures } = require('vscode-languageserver');
+  const { TextDocument } = require('vscode-languageserver-textdocument');
   const { DocumentManager } = require('./indexer/documentManager');
   const { WorkerPool } = require('./indexer/workerPool');
   const logger = require('./logger');
@@ -20,7 +21,7 @@ try {
       throw e;
     }
   }
-  const documents = new TextDocuments();
+  const documents = new TextDocuments(TextDocument);
 
   connection.onInitialize((params) => {
     try {

@@ -84,14 +84,8 @@ function inferParamsForSelection(fileContent, range) {
   });
 
   scored.sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
-  // Load API index (if available) to help infer types by matching class names
-  let apiClasses = new Set();
-  try {
-    const apiIndex = require('../../data/b4x-api-index.json');
-    if (apiIndex && Array.isArray(apiIndex.allClasses)) {
-      for (const c of apiIndex.allClasses) apiClasses.add(String(c.name));
-    }
-  } catch (_) { /* ignore if file missing */ }
+  // API index generation was removed; do not load a generated API index at runtime.
+  const apiClasses = new Set();
 
   // Infer basic types for the top candidates
   const results = [];

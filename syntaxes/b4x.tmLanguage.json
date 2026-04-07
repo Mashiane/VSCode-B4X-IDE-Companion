@@ -5,11 +5,14 @@
   "patterns": [
     { "include": "#comments" },
     { "include": "#strings" },
+    { "include": "#smart-strings" },
+    { "include": "#preprocessor" },
     { "include": "#sub-declarations" },
     { "include": "#type-annotations" },
     { "include": "#keywords" },
     { "include": "#constants" },
-    { "include": "#numbers" }
+    { "include": "#numbers" },
+    { "include": "#operators" }
   ],
   "repository": {
     "comments": {
@@ -35,19 +38,73 @@
         }
       ]
     },
+    "smart-strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.smart.b4x",
+          "begin": "\\$\"",
+          "end": "\"\\$",
+          "patterns": [
+            {
+              "name": "comment.block.smartstring.b4x",
+              "match": "\\$\\{(.*?)\\}"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.smart.alt.b4x",
+          "begin": "\\$\\[",
+          "end": "\\]\\$",
+          "patterns": [
+            {
+              "name": "comment.block.smartstring.b4x",
+              "match": "\\$\\{(.*?)\\}"
+            }
+          ]
+        }
+      ]
+    },
+    "preprocessor": {
+      "patterns": [
+        {
+          "name": "keyword.control.preprocessor.b4x",
+          "match": "(?i)^\\s*(#If|#Else|#Else If|#End If|#Region|#End Region)\\b"
+        },
+        {
+          "name": "keyword.other.preprocessor.directive.b4x",
+          "match": "(?i)^\\s*(#AdditionalJar|#ExcludeFromLibrary|#IgnoreFilters|#Property|#Event|#BA|#End BA)\\b"
+        },
+        {
+          "name": "keyword.other.preprocessor.attribute.b4x",
+          "match": "(?i)^\\s*(#BridgeLogger|#CanBackground|#CanInstall|#FullScreen|#IncludeJar|#MultiDex,#OrientedValue,#PortraitValue,#PlistExtra,#PackageName,#ApplicationLabel,#VersionCode,#VersionName,#AdditionalRes)\\b"
+        }
+      ]
+    },
     "sub-declarations": {
       "patterns": [
         {
-          "begin": "(?i)\\b(Sub)\\b\\s+",
+          "begin": "(?i)\\b(Public|Private)?\\s*(Sub)\\b\\s+",
           "beginCaptures": {
-            "1": {
-              "name": "storage.type.function.b4x"
-            }
+            "1": { "name": "storage.modifier.b4x" },
+            "2": { "name": "storage.type.function.b4x" }
           },
           "end": "(?=$|\\(|')",
           "patterns": [
             {
               "name": "entity.name.function.b4x",
+              "match": "[A-Za-z_][A-Za-z0-9_]*"
+            }
+          ]
+        },
+        {
+          "begin": "(?i)\\b(RaiseEvent)\\b\\s+",
+          "beginCaptures": {
+            "1": { "name": "keyword.control.b4x" }
+          },
+          "end": "(?=$|\\(|')",
+          "patterns": [
+            {
+              "name": "entity.name.function.event.b4x",
               "match": "[A-Za-z_][A-Za-z0-9_]*"
             }
           ]
@@ -59,9 +116,7 @@
         {
           "begin": "(?i)\\b(As)\\b\\s+",
           "beginCaptures": {
-            "1": {
-              "name": "keyword.operator.word.b4x"
-            }
+            "1": { "name": "keyword.operator.word.b4x" }
           },
           "end": "(?=$|,|\\)|=|')",
           "patterns": [
@@ -76,16 +131,32 @@
     "keywords": {
       "patterns": [
         {
-          "name": "keyword.control.b4x",
-          "match": "(?i)\\b(?:If|Then|Else|For|Next|Each|Do|While|Loop|Select|Case|Try|Catch|Return)\\b"
+          "name": "keyword.control.flow.b4x",
+          "match": "(?i)\\b(?:If|Then|Else|For|To|Next|Each|Do|While|Until|Loop|Select|Case|End Select|Try|Catch|End Try|Return|Exit|Continue|Wait For|Sleep|CallSub|CallSub2|CallSub3|CallSubDelayed|CallSubDelayed2|CallSubDelayed3|SubExists|GetType|IsNumber)\\b"
         },
         {
           "name": "keyword.control.conditional.b4x",
-          "match": "(?i)\\b(?:Else\\s+If|End\\s+If|End\\s+Select|End\\s+Try|End\\s+Sub)\\b"
+          "match": "(?i)\\b(?:Else If|End If|End Select|End Try|End Sub|Case Else)\\b"
+        },
+        {
+          "name": "keyword.control.loop.b4x",
+          "match": "(?i)\\b(?:For Each|Do While|Do Until|Do Loop|Loop While|Loop Until|While Wend)\\b"
         },
         {
           "name": "storage.modifier.b4x",
-          "match": "(?i)\\b(?:Dim|Private|Public|Type|Sub|Class_Globals|Process_Globals)\\b"
+          "match": "(?i)\\b(?:Dim|Private|Public|Type|Sub|End Sub|Class_Globals|Process_Globals|Globals|Class_Globals)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.b4x",
+          "match": "(?i)\\b(?:And|Or|Not|Xor|Mod|Eqv)\\b"
+        },
+        {
+          "name": "keyword.operator.word.b4x",
+          "match": "(?i)\\b(?:As|Is|Me|Null|True|False)\\b"
+        },
+        {
+          "name": "variable.language.b4x",
+          "match": "(?i)\\b(?:Sender)\\b"
         }
       ]
     },
@@ -94,14 +165,54 @@
         {
           "name": "constant.language.boolean.b4x",
           "match": "(?i)\\b(?:True|False)\\b"
+        },
+        {
+          "name": "constant.language.null.b4x",
+          "match": "(?i)\\b(?:Null)\\b"
+        },
+        {
+          "name": "constant.language.b4x",
+          "match": "(?i)\\b(?:CRLF|TAB|QUOTE|cPI|cE)\\b"
+        },
+        {
+          "name": "constant.language.builtin.b4x",
+          "match": "(?i)\\b(?:File|DateTime|Colors|Regex|Bit|Typeface|Gravity|KeyCodes|DialogResponse|Application|Density)\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.arithmetic.b4x",
+          "match": "(\\+|\\-|\\*|\\/|\\^|\\bMod\\b)"
+        },
+        {
+          "name": "keyword.operator.comparison.b4x",
+          "match": "(=|<>|!=|<=|>=|<|>)"
+        },
+        {
+          "name": "keyword.operator.assignment.b4x",
+          "match": "="
+        },
+        {
+          "name": "keyword.operator.string.concat.b4x",
+          "match": "&"
         }
       ]
     },
     "numbers": {
       "patterns": [
         {
-          "name": "constant.numeric.b4x",
-          "match": "\\b(?:0x[0-9A-Fa-f]+|\\d+(?:\\.\\d+)?)\\b"
+          "name": "constant.numeric.hex.b4x",
+          "match": "\\b0x[0-9A-Fa-f]+\\b"
+        },
+        {
+          "name": "constant.numeric.decimal.b4x",
+          "match": "\\b\\d+(\\.\\d+)?\\b"
+        },
+        {
+          "name": "constant.numeric.scientific.b4x",
+          "match": "\\b\\d+(\\.\\d+)?[eE][+-]?\\d+\\b"
         }
       ]
     }

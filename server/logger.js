@@ -22,4 +22,10 @@ function log(level, message, meta) {
   write(entry);
 }
 
-module.exports = { log };
+module.exports = {
+  log,
+  info:  (message, meta) => log('info',  message, meta),
+  warn:  (message, meta) => log('warn',  message, meta),
+  error: (message, meta) => log('error', message, meta),
+  debug: (message, meta) => log('debug', message, meta),
+};

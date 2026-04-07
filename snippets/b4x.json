@@ -8,6 +8,24 @@
     ],
     "description": "Create a subroutine"
   },
+  "Public Sub": {
+    "prefix": "pubsub",
+    "body": [
+      "Public Sub ${1:Name}(${2:Args})",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "Create a public subroutine"
+  },
+  "Private Sub": {
+    "prefix": "privsub",
+    "body": [
+      "Private Sub ${1:Name}(${2:Args})",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "Create a private subroutine"
+  },
   "Event Sub": {
     "prefix": "eventsub",
     "body": [
@@ -16,6 +34,16 @@
       "End Sub"
     ],
     "description": "Create an event subroutine"
+  },
+  "Resumable Sub": {
+    "prefix": "resub",
+    "body": [
+      "Private Sub ${1:Name}(${2:Args}) As ResumableSub",
+      "\t$0",
+      "\tReturn Null",
+      "End Sub"
+    ],
+    "description": "Create a resumable sub for async operations"
   },
   "If": {
     "prefix": "if",
@@ -37,6 +65,26 @@
     ],
     "description": "Create an If / Else block"
   },
+  "If ElseIf Else": {
+    "prefix": "ifee",
+    "body": [
+      "If ${1:condition} Then",
+      "\t${2}",
+      "Else If ${3:condition} Then",
+      "\t${4}",
+      "Else",
+      "\t$0",
+      "End If"
+    ],
+    "description": "Create an If / Else If / Else block"
+  },
+  "Inline If": {
+    "prefix": "iif",
+    "body": [
+      "${1:result} = IIf(${2:condition}, ${3:TrueValue}, ${4:FalseValue})"
+    ],
+    "description": "Inline If statement"
+  },
   "Select Case": {
     "prefix": "select",
     "body": [
@@ -49,6 +97,20 @@
     ],
     "description": "Create a Select / Case block"
   },
+  "Select Case Multiple": {
+    "prefix": "selectm",
+    "body": [
+      "Select ${1:value}",
+      "\tCase ${2:value1}",
+      "\t\t${3}",
+      "\tCase ${4:value2}",
+      "\t\t${5}",
+      "\tCase Else",
+      "\t\t$0",
+      "End Select"
+    ],
+    "description": "Create a Select / Case with multiple cases"
+  },
   "For": {
     "prefix": "for",
     "body": [
@@ -57,6 +119,15 @@
       "Next"
     ],
     "description": "Create a For / Next loop"
+  },
+  "For Step": {
+    "prefix": "forstep",
+    "body": [
+      "For ${1:i} = ${2:0} To ${3:10} Step ${4:2}",
+      "\t$0",
+      "Next"
+    ],
+    "description": "Create a For / Next loop with step"
   },
   "For Each": {
     "prefix": "foreach",
@@ -76,6 +147,54 @@
     ],
     "description": "Create a Do While / Loop block"
   },
+  "Do Until": {
+    "prefix": "dountil",
+    "body": [
+      "Do Until ${1:condition}",
+      "\t$0",
+      "Loop"
+    ],
+    "description": "Create a Do Until / Loop block"
+  },
+  "Do Loop While": {
+    "prefix": "dowhileend",
+    "body": [
+      "Do",
+      "\t$0",
+      "Loop While ${1:condition}"
+    ],
+    "description": "Create a Do / Loop While block"
+  },
+  "Do Loop Until": {
+    "prefix": "dountilend",
+    "body": [
+      "Do",
+      "\t$0",
+      "Loop Until ${1:condition}"
+    ],
+    "description": "Create a Do / Loop Until block"
+  },
+  "While": {
+    "prefix": "while",
+    "body": [
+      "Do While ${1:condition}",
+      "\t$0",
+      "Loop"
+    ],
+    "description": "Create a While loop (Do While equivalent)"
+  },
+  "Try Catch": {
+    "prefix": "try",
+    "body": [
+      "Try",
+      "\t${1}",
+      "Catch",
+      "\tLog(LastException)",
+      "\t$0",
+      "End Try"
+    ],
+    "description": "Create a Try / Catch / End Try block"
+  },
   "Type": {
     "prefix": "type",
     "body": [
@@ -90,6 +209,45 @@
     ],
     "description": "Create a local variable declaration"
   },
+  "Dim Array": {
+    "prefix": "dimarr",
+    "body": [
+      "Dim ${1:name}(${2:10}) As ${3:String}"
+    ],
+    "description": "Create an array variable declaration"
+  },
+  "Dim Initialize": {
+    "prefix": "diminit",
+    "body": [
+      "Dim ${1:name} As ${2:Type}",
+      "${1:name}.Initialize"
+    ],
+    "description": "Create and initialize a variable"
+  },
+  "Dim List": {
+    "prefix": "dimlist",
+    "body": [
+      "Dim ${1:name} As List",
+      "${1:name}.Initialize"
+    ],
+    "description": "Create and initialize a List"
+  },
+  "Dim Map": {
+    "prefix": "dimmap",
+    "body": [
+      "Dim ${1:name} As Map",
+      "${1:name}.Initialize"
+    ],
+    "description": "Create and initialize a Map"
+  },
+  "Dim StringBuilder": {
+    "prefix": "dimsb",
+    "body": [
+      "Dim ${1:sb} As StringBuilder",
+      "${1:sb}.Initialize"
+    ],
+    "description": "Create and initialize a StringBuilder"
+  },
   "Private": {
     "prefix": "private",
     "body": [
@@ -103,6 +261,13 @@
       "Public ${1:name} As ${2:String}"
     ],
     "description": "Create a public variable declaration"
+  },
+  "Const": {
+    "prefix": "const",
+    "body": [
+      "Private Const ${1:NAME} = ${2:value} As ${3:Int}"
+    ],
+    "description": "Create a constant declaration"
   },
   "Class Globals": {
     "prefix": "classglobals",
@@ -122,17 +287,14 @@
     ],
     "description": "Create a Process_Globals block"
   },
-  "Try Catch": {
-    "prefix": "try",
+  "Globals": {
+    "prefix": "globals",
     "body": [
-      "Try",
-      "\t${1}",
-      "Catch",
-      "\tLog(LastException)",
+      "Sub Globals",
       "\t$0",
-      "End Try"
+      "End Sub"
     ],
-    "description": "Create a Try / Catch / End Try block"
+    "description": "Create a Globals block (B4A Activity)"
   },
   "Log": {
     "prefix": "log",
@@ -140,5 +302,766 @@
       "Log(${1:\"value: \" & value})"
     ],
     "description": "Log a value or expression"
+  },
+  "Wait For": {
+    "prefix": "waitfor",
+    "body": [
+      "Wait For (${1:sender})_${2:EventName} (${3:Args})",
+      "\t$0"
+    ],
+    "description": "Wait for an async event"
+  },
+  "Sleep": {
+    "prefix": "sleep",
+    "body": [
+      "Sleep(${1:1000})"
+    ],
+    "description": "Sleep for specified milliseconds"
+  },
+  "CallSub": {
+    "prefix": "callsub",
+    "body": [
+      "CallSub(${1:Component}, \"${2:SubName}\")"
+    ],
+    "description": "Call a sub in another component"
+  },
+  "CallSub2": {
+    "prefix": "callsub2",
+    "body": [
+      "CallSub2(${1:Component}, \"${2:SubName}\", ${3:Argument})"
+    ],
+    "description": "Call a sub with one argument"
+  },
+  "CallSub3": {
+    "prefix": "callsub3",
+    "body": [
+      "CallSub3(${1:Component}, \"${2:SubName}\", ${3:Arg1}, ${4:Arg2})"
+    ],
+    "description": "Call a sub with two arguments"
+  },
+  "CallSubDelayed": {
+    "prefix": "callsubd",
+    "body": [
+      "CallSubDelayed(${1:Component}, \"${2:SubName}\")"
+    ],
+    "description": "Call a sub asynchronously"
+  },
+  "Smart String": {
+    "prefix": "smartstr",
+    "body": [
+      "$\"${1:Text with ${2:variable} interpolation}\"$"
+    ],
+    "description": "Smart string literal with interpolation"
+  },
+  "Smart String Multi-line": {
+    "prefix": "smartstrml",
+    "body": [
+      "$\"${1:Line 1}",
+      "${2:Line 2 with ${3:variable}}",
+      "${4:Line 3}\"$"
+    ],
+    "description": "Multi-line smart string literal"
+  },
+  "RaiseEvent": {
+    "prefix": "raiseevent",
+    "body": [
+      "RaiseEvent ${1:EventName}(${2:Args})"
+    ],
+    "description": "Raise an event in a class"
+  },
+  "Return": {
+    "prefix": "return",
+    "body": [
+      "Return ${1:value}"
+    ],
+    "description": "Return a value from a sub"
+  },
+  "Exit": {
+    "prefix": "exit",
+    "body": [
+      "Exit"
+    ],
+    "description": "Exit a loop or sub early"
+  },
+  "Continue": {
+    "prefix": "continue",
+    "body": [
+      "Continue"
+    ],
+    "description": "Continue to next iteration"
+  },
+  "#Region": {
+    "prefix": "region",
+    "body": [
+      "#Region ${1:Region Name}",
+      "$0",
+      "#End Region"
+    ],
+    "description": "Create a code region"
+  },
+  "Activity_Create": {
+    "prefix": "activitycreate",
+    "body": [
+      "Sub Activity_Create(FirstTime As Boolean)",
+      "\tIf FirstTime Then",
+      "\t\t$0",
+      "\tEnd If",
+      "End Sub"
+    ],
+    "description": "B4A Activity_Create template"
+  },
+  "Activity_Resume": {
+    "prefix": "activityresume",
+    "body": [
+      "Sub Activity_Resume",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4A Activity_Resume template"
+  },
+  "Activity_Pause": {
+    "prefix": "activitypause",
+    "body": [
+      "Sub Activity_Pause (UserClosed As Boolean)",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4A Activity_Pause template"
+  },
+  "Application_Start": {
+    "prefix": "appstart",
+    "body": [
+      "Private Sub Application_Start (Nav As NavigationController)",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4i Application_Start template"
+  },
+  "Service_Create": {
+    "prefix": "servicecreate",
+    "body": [
+      "Sub Service_Create",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4A Service_Create template"
+  },
+  "Service_Start": {
+    "prefix": "servicestart",
+    "body": [
+      "Sub Service_Start (StartingIntent As Intent)",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4A Service_Start template"
+  },
+  "B4XPage Created": {
+    "prefix": "b4xpagecreated",
+    "body": [
+      "Private Sub B4XPage_Created (Root1 As B4XView)",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4XPages B4XPage_Created event"
+  },
+  "B4XPage Appear": {
+    "prefix": "b4xpageappear",
+    "body": [
+      "Private Sub B4XPage_Appear",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4XPages B4XPage_Appear event"
+  },
+  "B4XPage Disappear": {
+    "prefix": "b4xpagedisappear",
+    "body": [
+      "Private Sub B4XPage_Disappear",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4XPages B4XPage_Disappear event"
+  },
+  "B4XPage Resize": {
+    "prefix": "b4xpageresize",
+    "body": [
+      "Private Sub B4XPage_Resize (Width As Int, Height As Int)",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "B4XPages B4XPage_Resize event"
+  },
+  "B4XPages Template": {
+    "prefix": "b4xpage",
+    "body": [
+      "B4XPage-Creator: ${1:false}",
+      "",
+      "Sub Class_Globals",
+      "\tPrivate Root As B4XView",
+      "\tPrivate xui As XUI",
+      "End Sub",
+      "",
+      "Public Sub Initialize",
+      "",
+      "End Sub",
+      "",
+      "'This event will be called once, before the page becomes visible.",
+      "Private Sub B4XPage_Created (Root1 As B4XView)",
+      "\tRoot = Root1",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "Complete B4XPages page template"
+  },
+  "CustomView Initialize": {
+    "prefix": "customviewinit",
+    "body": [
+      "Public Sub Initialize (Callback As Object, EventName As String)",
+      "\tmEventName = EventName",
+      "\tmCallBack = Callback",
+      "End Sub"
+    ],
+    "description": "CustomView Initialize method"
+  },
+  "CustomView DesignerCreateView": {
+    "prefix": "customviewdesigner",
+    "body": [
+      "'This is the base class. In most cases, you should add your views to mBase.",
+      "Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)",
+      "\tmBase = Base",
+      "\tDim xlbl As B4XView = Lbl",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "CustomView DesignerCreateView method"
+  },
+  "CustomView Template": {
+    "prefix": "customview",
+    "body": [
+      "#DesignerProperty: Key: ${1:PropertyName}, DisplayName: ${2:Display Name}, FieldType: ${3:String}, DefaultValue: ${4:}",
+      "",
+      "Sub Class_Globals",
+      "\tPrivate mEventName As String",
+      "\tPrivate mCallBack As Object",
+      "\tPrivate mBase As B4XView",
+      "\tPrivate xui As XUI",
+      "\tPublic Tag As Object",
+      "\tPrivate ${5:customProperty} As ${6:String}",
+      "End Sub",
+      "",
+      "Public Sub Initialize (Callback As Object, EventName As String)",
+      "\tmEventName = EventName",
+      "\tmCallBack = Callback",
+      "End Sub",
+      "",
+      "Public Sub DesignerCreateView (Base As Object, Lbl As Label, Props As Map)",
+      "\tmBase = Base",
+      "\tDim xlbl As B4XView = Lbl",
+      "\t${7:' Initialize your custom properties from Props}",
+      "\t${5:customProperty} = Props.GetDefault(\"${1:PropertyName}\", \"${4:}\")",
+      "\t$0",
+      "End Sub",
+      "",
+      "Public Sub GetBase As B4XView",
+      "\tReturn mBase",
+      "End Sub"
+    ],
+    "description": "Complete CustomView template with DesignerProperty"
+  },
+  "CustomView GetBase": {
+    "prefix": "customviewgetbase",
+    "body": [
+      "Public Sub GetBase As B4XView",
+      "\tReturn mBase",
+      "End Sub"
+    ],
+    "description": "CustomView GetBase method"
+  },
+  "CustomView Property Get": {
+    "prefix": "propget",
+    "body": [
+      "Public Sub get${1:PropertyName} As ${2:String}",
+      "\tReturn ${3:mPropertyName}",
+      "End Sub"
+    ],
+    "description": "CustomView property getter"
+  },
+  "CustomView Property Set": {
+    "prefix": "propset",
+    "body": [
+      "Public Sub set${1:PropertyName} (v As ${2:String})",
+      "\t${3:mPropertyName} = v",
+      "\t$0",
+      "End Sub"
+    ],
+    "description": "CustomView property setter"
+  },
+  "SQL Initialize": {
+    "prefix": "sqlinit",
+    "body": [
+      "Dim ${1:sql} As SQL",
+      "${1:sql}.Initialize(${2:File.DirInternal}, \"${3:mydb.db}\", ${4:True})"
+    ],
+    "description": "Initialize SQL database"
+  },
+  "SQL Initialize B4J": {
+    "prefix": "sqlinitb4j",
+    "body": [
+      "#AdditionalJar: sqlite-jdbc-3.7.2",
+      "",
+      "Dim ${1:sql} As SQL",
+      "${1:sql}.InitializeSQLite(${2:File.DirData}, \"${3:mydb.db}\", ${4:True})"
+    ],
+    "description": "Initialize SQL database for B4J"
+  },
+  "SQL ExecQuery": {
+    "prefix": "sqlquery",
+    "body": [
+      "Dim ${1:rs} As ResultSet = ${2:sql}.ExecQuery(\"${3:SELECT * FROM table}\")",
+      "Do While ${1:rs}.NextRow",
+      "\t${4:Log(${1:rs}.GetString(\"column_name\"))}",
+      "Loop",
+      "${1:rs}.Close"
+    ],
+    "description": "SQL query with ResultSet"
+  },
+  "SQL ExecQueryAsync": {
+    "prefix": "sqlqueryasync",
+    "body": [
+      "Wait For (${2:sql}.ExecQueryAsync(\"${3:SELECT * FROM table}\", Null)) Complete (${4:Success} As Boolean, ${5:rs} As ResultSet)",
+      "If ${4:Success} Then",
+      "\tDo While ${5:rs}.NextRow",
+      "\t\t$0",
+      "\tLoop",
+      "\t${5:rs}.Close",
+      "End If"
+    ],
+    "description": "SQL async query with Wait For"
+  },
+  "SQL ExecNonQuery": {
+    "prefix": "sqlnonquery",
+    "body": [
+      "${1:sql}.ExecNonQuery(\"${2:INSERT INTO table (column) VALUES ('value')}\")"
+    ],
+    "description": "SQL non-query (INSERT, UPDATE, DELETE)"
+  },
+  "SQL Transaction": {
+    "prefix": "sqltrans",
+    "body": [
+      "${1:sql}.BeginTransaction",
+      "Try",
+      "\t${2:sql}.ExecNonQuery(\"${3:SQL statement}\")",
+      "\t${1:sql}.TransactionSuccessful",
+      "Catch",
+      "\tLog(LastException)",
+      "End Try",
+      "${1:sql}.EndTransaction"
+    ],
+    "description": "SQL transaction with Try/Catch"
+  },
+  "SQL Batch Operations": {
+    "prefix": "sqlbatch",
+    "body": [
+      "${1:sql}.BeginTransaction",
+      "Try",
+      "\tFor Each ${2:item} In ${3:Items}",
+      "\t\t${1:sql}.ExecNonQuery2(\"INSERT INTO table VALUES (?)\", Array As Object(${2:item}))",
+      "\tNext",
+      "\t${1:sql}.TransactionSuccessful",
+      "Catch",
+      "\tLog(LastException)",
+      "End Try",
+      "${1:sql}.EndTransaction"
+    ],
+    "description": "SQL batch operations with transaction"
+  },
+  "XUI Msgbox": {
+    "prefix": "xuimsgbox",
+    "body": [
+      "Wait For (xui.MsgboxAsync(\"${1:Message}\", \"${2:Title}\")) Complete (Result As Int)"
+    ],
+    "description": "XUI cross-platform message box"
+  },
+  "XUI Msgbox2": {
+    "prefix": "xuimsgbox2",
+    "body": [
+      "Wait For (xui.Msgbox2Async(\"${1:Message}\", \"${2:Title}\", \"${3:Yes}\", \"${4:Cancel}\", \"${5:No}\", Null)) Complete (Result As Int)",
+      "If Result = xui.DialogResponse_Positive Then",
+      "\t$0",
+      "End If"
+    ],
+    "description": "XUI message box with multiple buttons"
+  },
+  "XUI Create Font": {
+    "prefix": "xuifont",
+    "body": [
+      "Dim ${1:font} As B4XFont = xui.CreateDefaultFont(${2:14})"
+    ],
+    "description": "XUI create default font (no DIP!)"
+  },
+  "XUI Create Font Bold": {
+    "prefix": "xuifontbold",
+    "body": [
+      "Dim ${1:font} As B4XFont = xui.CreateDefaultBoldFont(${2:14})"
+    ],
+    "description": "XUI create bold default font"
+  },
+  "XUI Create Font Custom": {
+    "prefix": "xuifont2",
+    "body": [
+      "Dim ${1:font} As B4XFont = xui.CreateFont2(\"${2:Arial}\", ${3:14}, ${4:False}, ${5:False})"
+    ],
+    "description": "XUI create custom font"
+  },
+  "XUI Color RGB": {
+    "prefix": "xuicolor",
+    "body": [
+      "xui.Color_RGB(${1:255}, ${2:0}, ${3:0})"
+    ],
+    "description": "XUI create RGB color"
+  },
+  "XUI Color ARGB": {
+    "prefix": "xuicolorargb",
+    "body": [
+      "xui.Color_ARGB(${1:255}, ${2:255}, ${3:0}, ${4:0})"
+    ],
+    "description": "XUI create ARGB color with alpha"
+  },
+  "XUI Load Bitmap": {
+    "prefix": "xuiloaderesize",
+    "body": [
+      "Dim ${1:bmp} As B4XBitmap = xui.LoadBitmapResize(${2:File.DirAssets}, \"${3:image.png}\", ${4:100dip}, ${5:100dip}, ${6:True})"
+    ],
+    "description": "XUI load and resize bitmap"
+  },
+  "XUI Create Panel": {
+    "prefix": "xuipanel",
+    "body": [
+      "Dim ${1:pnl} As B4XView = xui.CreatePanel(\"${2:}\")",
+      "${1:pnl}.SetLayoutAnimated(0, 0, 0, ${3:100dip}, ${4:100dip})"
+    ],
+    "description": "XUI create panel"
+  },
+  "XUI Set Data Folder": {
+    "prefix": "xuisetdatafolder",
+    "body": [
+      "xui.SetDataFolder(\"${1:MyApp}\")"
+    ],
+    "description": "XUI set data folder (call once before using DefaultFolder)"
+  },
+  "XUI SubExists": {
+    "prefix": "xuisubexists",
+    "body": [
+      "If xui.SubExists(${1:Callback}, \"${2:EventName}\", ${3:1}) Then",
+      "\t$0",
+      "End If"
+    ],
+    "description": "XUI check if sub exists with parameter count"
+  },
+  "Cross Platform If": {
+    "prefix": "ifb4j",
+    "body": [
+      "#If B4J",
+      "\t$0",
+      "#End If"
+    ],
+    "description": "Cross-platform #If B4J directive"
+  },
+  "Cross Platform If B4A": {
+    "prefix": "ifb4a",
+    "body": [
+      "#If B4A",
+      "\t$0",
+      "#End If"
+    ],
+    "description": "Cross-platform #If B4A directive"
+  },
+  "Cross Platform If B4i": {
+    "prefix": "ifb4i",
+    "body": [
+      "#If B4i",
+      "\t$0",
+      "#End If"
+    ],
+    "description": "Cross-platform #If B4i directive"
+  },
+  "Cross Platform Full": {
+    "prefix": "ifplatform",
+    "body": [
+      "#If B4J",
+      "\t${1:' B4J code}",
+      "#Else If B4A",
+      "\t${2:' B4A code}",
+      "#Else If B4i",
+      "\t${3:' B4i code}",
+      "#End If"
+    ],
+    "description": "Full cross-platform conditional compilation"
+  },
+  "Canvas Draw Text": {
+    "prefix": "canvasdrawtext",
+    "body": [
+      "Dim ${1:cvs} As B4XCanvas",
+      "${1:cvs}.Initialize(${2:TargetView})",
+      "${1:cvs}.DrawText(\"${3:Text}\", ${4:cvs.TargetRect.CenterX}, ${5:50dip}, ${6:xui.CreateDefaultFont(20)}, ${7:xui.Color_Black}, \"CENTER\")",
+      "${1:cvs}.Invalidate"
+    ],
+    "description": "Canvas draw text"
+  },
+  "Canvas Draw Line": {
+    "prefix": "canvasdrawline",
+    "body": [
+      "Dim ${1:cvs} As B4XCanvas",
+      "${1:cvs}.Initialize(${2:TargetView})",
+      "${1:cvs}.DrawLine(${3:10dip}, ${4:10dip}, ${5:100dip}, ${6:100dip}, ${7:xui.Color_Black}, ${8:2dip})",
+      "${1:cvs}.Invalidate"
+    ],
+    "description": "Canvas draw line"
+  },
+  "Canvas Draw Rect": {
+    "prefix": "canvasdrawrect",
+    "body": [
+      "Dim ${1:cvs} As B4XCanvas",
+      "${1:cvs}.Initialize(${2:TargetView})",
+      "Dim ${3:rect} As B4XRect",
+      "${3:rect}.Initialize(${4:10dip}, ${5:10dip}, ${6:100dip}, ${7:100dip})",
+      "${1:cvs}.DrawRect(${3:rect}, ${8:xui.Color_Black}, ${9:False}, ${10:2dip})",
+      "${1:cvs}.Invalidate"
+    ],
+    "description": "Canvas draw rectangle"
+  },
+  "Canvas Draw Circle": {
+    "prefix": "canvasdrawcircle",
+    "body": [
+      "Dim ${1:cvs} As B4XCanvas",
+      "${1:cvs}.Initialize(${2:TargetView})",
+      "${1:cvs}.DrawCircle(${3:50dip}, ${4:50dip}, ${5:30dip}, ${6:xui.Color_Black}, ${7:False}, ${8:2dip})",
+      "${1:cvs}.Invalidate"
+    ],
+    "description": "Canvas draw circle"
+  },
+  "Canvas Draw Bitmap": {
+    "prefix": "canvasdrawbmp",
+    "body": [
+      "Dim ${1:cvs} As B4XCanvas",
+      "${1:cvs}.Initialize(${2:TargetView})",
+      "${1:cvs}.DrawBitmap(${3:bmp}, ${4:cvs.TargetRect})",
+      "${1:cvs}.Invalidate"
+    ],
+    "description": "Canvas draw bitmap"
+  },
+  "B4XRect Initialize": {
+    "prefix": "b4xrect",
+    "body": [
+      "Dim ${1:rect} As B4XRect",
+      "${1:rect}.Initialize(${2:Left}, ${3:Top}, ${4:Right}, ${5:Bottom})"
+    ],
+    "description": "Initialize B4XRect"
+  },
+  "B4XPath Initialize": {
+    "prefix": "b4xpath",
+    "body": [
+      "Dim ${1:path} As B4XPath",
+      "${1:path}.Initialize(${2:StartX}, ${3:StartY})"
+    ],
+    "description": "Initialize B4XPath"
+  },
+  "B4XPath LineTo": {
+    "prefix": "pathlineto",
+    "body": [
+      "${1:path}.LineTo(${2:EndX}, ${3:EndY})"
+    ],
+    "description": "B4XPath add line segment"
+  },
+  "BitmapCreator Initialize": {
+    "prefix": "bitmapcreator",
+    "body": [
+      "Dim ${1:bc} As BitmapCreator",
+      "${1:bc}.Initialize(${2:Width}, ${3:Height})"
+    ],
+    "description": "Initialize BitmapCreator (no DIP units!)"
+  },
+  "BitmapCreator Draw Rect": {
+    "prefix": "bcdrawrect",
+    "body": [
+      "Dim ${1:rect} As BCRect",
+      "${1:rect}.Initialize(${2:Left}, ${3:Top}, ${4:Right}, ${5:Bottom})",
+      "${6:bc}.DrawRect2(${1:rect}, ${7:bc.ARGBFromColor(${8:xui.Color_Blue})}, ${9:True}, 0, 0)"
+    ],
+    "description": "BitmapCreator draw filled rectangle"
+  },
+  "BitmapCreator Draw Line": {
+    "prefix": "bcdrawline",
+    "body": [
+      "${1:bc}.DrawLine(${2:x1}, ${3:y1}, ${4:x2}, ${5:y2}, ${6:bc.ARGBFromColor(${7:xui.Color_Black})}, ${8:2})"
+    ],
+    "description": "BitmapCreator draw line"
+  },
+  "BitmapCreator Draw Circle": {
+    "prefix": "bcdrawcircle",
+    "body": [
+      "${1:bc}.DrawCircle(${2:x}, ${3:y}, ${4:Radius}, ${5:bc.ARGBFromColor(${6:xui.Color_Black})}, ${7:True})"
+    ],
+    "description": "BitmapCreator draw circle"
+  },
+  "BitmapCreator Get/Set Pixel": {
+    "prefix": "bcgetsetpixel",
+    "body": [
+      "Dim ${1:color} As ARGBColor",
+      "${1:color} = ${2:bc}.GetARGB(${3:x}, ${4:y})",
+      "${5:' Modify color}",
+      "${2:bc}.SetARGB(${3:x}, ${4:y}, ${1:color})"
+    ],
+    "description": "BitmapCreator get/set pixel color"
+  },
+  "JavaObject Create Instance": {
+    "prefix": "jocreate",
+    "body": [
+      "Dim ${1:jo} As JavaObject",
+      "${1:jo}.InitializeNewInstance(\"${2:fully.qualified.ClassName}\", ${3:Null})"
+    ],
+    "description": "JavaObject create new instance"
+  },
+  "JavaObject Run Method": {
+    "prefix": "jorunmethod",
+    "body": [
+      "${1:jo}.RunMethod(\"${2:methodName}\", ${3:Array As Object(${4:arg1}, ${5:arg2})})"
+    ],
+    "description": "JavaObject run method"
+  },
+  "JavaObject Get/Set Field": {
+    "prefix": "jogetsetfield",
+    "body": [
+      "' Get field",
+      "Dim ${1:value} = ${2:jo}.GetField(\"${3:fieldName}\")",
+      "",
+      "' Set field",
+      "${2:jo}.SetField(\"${3:fieldName}\", ${4:newValue})"
+    ],
+    "description": "JavaObject get/set field"
+  },
+  "JavaObject Static Method": {
+    "prefix": "jostatic",
+    "body": [
+      "Dim ${1:jo} As JavaObject",
+      "${1:jo}.InitializeStatic(\"${2:fully.qualified.ClassName}\")",
+      "${1:jo}.RunMethod(\"${3:staticMethod}\", ${4:Null})"
+    ],
+    "description": "JavaObject call static method"
+  },
+  "NativeObject Create Block": {
+    "prefix": "nocreateblock",
+    "body": [
+      "Dim ${1:no} As NativeObject",
+      "${1:no}.CreateBlock(\"${2:blockName}\", ${3:Callback}, ${4:SubName})"
+    ],
+    "description": "NativeObject create block (B4i)"
+  },
+  "NativeObject Run Method": {
+    "prefix": "norunmethod",
+    "body": [
+      "Dim ${1:no} As NativeObject = ${2:object}",
+      "${1:no}.RunMethod(\"${3:methodName}\", ${4:Null})"
+    ],
+    "description": "NativeObject run method (B4i)"
+  },
+  "NativeObject Get/Set Field": {
+    "prefix": "nogetsetfield",
+    "body": [
+      "' Get field",
+      "Dim ${1:value} As Object = ${2:no}.GetField(\"${3:fieldName}\")",
+      "",
+      "' Set field",
+      "${2:no}.SetField(\"${3:fieldName}\", ${4:value})"
+    ],
+    "description": "NativeObject get/set field (B4i)"
+  },
+  "DBUtils ExecuteListView": {
+    "prefix": "dbutilslistview",
+    "body": [
+      "DBUtils.ExecuteListView(${1:sql}, \"${2:SELECT * FROM table}\", Null, ${3:ListView}, ${4:True})"
+    ],
+    "description": "DBUtils execute query to ListView"
+  },
+  "DBUtils ExecuteTableView": {
+    "prefix": "dbutilstableview",
+    "body": [
+      "DBUtils.ExecuteTableView(${1:sql}, \"${2:SELECT * FROM table}\", Null, ${3:CustomListView}, ${4:True})"
+    ],
+    "description": "DBUtils execute query to TableView/CustomListView"
+  },
+  "DBUtils InsertMaps": {
+    "prefix": "dbutilsinsertmaps",
+    "body": [
+      "Dim ${1:maps} As List",
+      "${1:maps}.Initialize",
+      "Dim ${2:row} As Map",
+      "${2:row}.Initialize",
+      "${2:row}.Put(\"column1\", ${3:\"value1\"})",
+      "${1:maps}.Add(${2:row})",
+      "DBUtils.InsertMaps(${4:sql}, \"${5:tableName}\", ${1:maps})"
+    ],
+    "description": "DBUtils insert multiple rows with Maps"
+  },
+  "DBUtils TableExists": {
+    "prefix": "dbutilstableexists",
+    "body": [
+      "If DBUtils.TableExists(${1:sql}, \"${2:tableName}\") Then",
+      "\t$0",
+      "End If"
+    ],
+    "description": "DBUtils check if table exists"
+  },
+  "Touch Event": {
+    "prefix": "touchevent",
+    "body": [
+      "Sub ${1:View}_Touch (Action As Int, X As Float, Y As Float, MotionEvent As Object) As Boolean",
+      "\tSelect Action",
+      "\t\tCase ${2:xui.TOUCH_ACTION_DOWN}",
+      "\t\t\t${3:' Touch started}",
+      "\t\tCase ${4:xui.TOUCH_ACTION_MOVE}",
+      "\t\t\t${5:' Touch moved}",
+      "\t\tCase ${6:xui.TOUCH_ACTION_UP}",
+      "\t\t\t${7:' Touch ended}",
+      "\tEnd Select",
+      "\tReturn ${8:True}",
+      "End Sub"
+    ],
+    "description": "Touch event handler with action cases"
+  },
+  "B4XView Add View": {
+    "prefix": "b4xaddview",
+    "body": [
+      "Dim ${1:view} As B4XView = ${2:xui.CreatePanel(\"\")}",
+      "${3:Parent}.AddView(${1:view}, ${4:Left}, ${5:Top}, ${6:Width}, ${7:Height})"
+    ],
+    "description": "B4XView add view to parent"
+  },
+  "B4XView Load Layout": {
+    "prefix": "b4xloadlayout",
+    "body": [
+      "${1:Parent}.LoadLayout(\"${2:layout.bjl}\")"
+    ],
+    "description": "B4XView load layout (cross-platform)"
+  },
+  "Sender As Type": {
+    "prefix": "senderas",
+    "body": [
+      "Dim ${1:view} As ${2:B4XView} = Sender",
+      "$0"
+    ],
+    "description": "Cast Sender to specific type"
+  },
+  "ForEach View In Panel": {
+    "prefix": "foreachview",
+    "body": [
+      "For Each ${1:v} As B4XView In ${2:Panel}.GetAllViewsRecursive",
+      "\tIf ${1:v} Is ${3:Label} Then",
+      "\t\tDim ${4:lbl} As B4XView = ${1:v}",
+      "\t\t${0:' Process label}",
+      "\tEnd If",
+      "Next"
+    ],
+    "description": "Loop through all views in panel"
   }
 }

@@ -19,5 +19,68 @@
     ["{", "}"],
     ["\"", "\""]
   ],
-  "wordPattern": "(-?\\d*\\.\\d\\w*)|([^\\s\\`\\~\\!\\@\\#\\$\\%\\^\\&\\*\\(\\)\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\",\\<\\>\\/\\?]+)"
+  "wordPattern": "(-?\\d*\\.\\d\\w*)|([^\\s\\`\\~\\!\\@\\#\\$\\%\\^\\&\\*\\(\\)\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\",\\<\\>\\/\\?]+)",
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*(Public\\s+|Private\\s+)?(If\\b.*\\bThen\\b(?!.*\\bElse\\b.*$)|Else\\b|Else\\s+If\\b|Try\\b|Catch\\b|For\\b|For\\s+Each\\b|Do\\b|While\\b|Select\\b|Case\\b|Sub\\b|Type\\b)",
+    "decreaseIndentPattern": "^\\s*(End\\s+(If|Select|Try|Sub|Type|With)|Else\\b|Else\\s+If\\b|Case\\b|Case\\s+Else\\b|Next\\b|Loop\\b|Catch\\b)",
+    "unIndentedLinePattern": "^\\s*'.*",
+    "indentNextLinePattern": "^\\s*(Public\\s+|Private\\s+)?(If|Else|Try|Catch|For|Select|Case|Sub|Type)\\b"
+  },
+  "onEnterRules": [
+    {
+      "beforeText": "^\\s*(Public\\s+|Private\\s+)?Sub\\b.*$",
+      "action": {
+        "indent": "indent",
+        "appendText": ""
+      }
+    },
+    {
+      "beforeText": "^\\s*(Public\\s+|Private\\s+)?If\\b.*Then\\b(?!.*\\bEnd\\s+If\\b.*$).*$",
+      "action": {
+        "indent": "indent"
+      }
+    },
+    {
+      "beforeText": "^\\s*(Public\\s+|Private\\s+)?For\\b.*$",
+      "action": {
+        "indent": "indent"
+      }
+    },
+    {
+      "beforeText": "^\\s*(Public\\s+|Private\\s+)?Do\\b.*$",
+      "action": {
+        "indent": "indent"
+      }
+    },
+    {
+      "beforeText": "^\\s*(Public\\s+|Private\\s+)?While\\b.*$",
+      "action": {
+        "indent": "indent"
+      }
+    },
+    {
+      "beforeText": "^\\s*(Public\\s+|Private\\s+)?Select\\b.*$",
+      "action": {
+        "indent": "indent"
+      }
+    },
+    {
+      "beforeText": "^\\s*(Public\\s+|Private\\s+)?Try\\b.*$",
+      "action": {
+        "indent": "indent"
+      }
+    },
+    {
+      "beforeText": "^\\s*Catch\\b.*$",
+      "action": {
+        "indent": "none"
+      }
+    },
+    {
+      "beforeText": "^\\s*(Public\\s+|Private\\s+)?Type\\b.*$",
+      "action": {
+        "indent": "indent"
+      }
+    }
+  ]
 }
