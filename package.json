@@ -2,7 +2,7 @@
   "name": "b4x-intellisense",
   "displayName": "VS Code B4X IDE Companion",
   "description": "Comprehensive IDE companion for the B4X family (B4A, B4i, B4J, B4R). Provides a complete developer toolkit for Visual Studio Code including a local LSP backend and fast workspace indexer with optional prebuilt API index. Delivers advanced language features (contextual completions, hover, go-to-definition, rename, signature help), cross-file type inference, persistent on-disk indexing with safe atomic writes and migrations, XML and library discovery, project-aware configuration via .b4a/.b4i/.b4j/.b4r files, and server-side refactor actions (Extract Method with preview). Includes diagnostics, code actions, platform INI/theme import, VS Code commands for project management, and an offline-first design that gracefully falls back to live workspace and installed libraries when a bundled API index is not present.",
-  "version": "0.1.261",
+  "version": "0.1.270",
   "publisher": "AneleMbangaMashy",
   "engines": {
     "vscode": "^1.95.0"
@@ -168,6 +168,41 @@
       {
         "command": "b4xIntellisense.runDiagnostics",
         "title": "B4X: Run All Diagnostics",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.refreshLibraryIndex",
+        "title": "B4X: Refresh Library Index",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.showLibraryDbPath",
+        "title": "B4X: Show Library DB Path",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.clearLibraryCache",
+        "title": "B4X: Clear Library Cache",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.backupWorkspace",
+        "title": "B4X: Backup Workspace",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.setB4aInstallPath",
+        "title": "B4X: Set Platform Install Path",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.extractMethod",
+        "title": "B4X: Extract Method",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.insertEventHandler",
+        "title": "B4X: Insert Event Handler",
         "category": "B4X Companion"
       }
     ],
@@ -428,6 +463,31 @@
         {
           "command": "b4xIntellisense.triggerParameterHints",
           "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.extractMethod",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.insertEventHandler",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.refreshLibraryIndex"
+        },
+        {
+          "command": "b4xIntellisense.clearLibraryCache"
+        },
+        {
+          "command": "b4xIntellisense.backupWorkspace",
+          "when": "b4x.hasBuildableProject"
+        },
+        {
+          "command": "b4xIntellisense.setB4aInstallPath"
+        },
+        {
+          "command": "b4xIntellisense.showLibraryDbPath",
+          "when": "false"
         }
       ]
     },
@@ -555,6 +615,16 @@
           "type": "boolean",
           "default": false,
           "description": "When true, the extension appends a timestamped log file (b4x-log-YYYYMMDD-HHMMSS.txt) containing debug entries for extension actions."
+        },
+        "b4xIntellisense.adbPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the adb executable. Leave empty to auto-detect from the Android SDK (via platform INI) or prompt on first use."
+        },
+        "b4xIntellisense.ffmpegPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the ffmpeg executable used for GIF capture. Leave empty to auto-detect from common install locations or prompt on first use."
         }
       }
     }

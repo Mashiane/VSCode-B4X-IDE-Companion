@@ -3,7 +3,7 @@
 > **Comprehensive IDE companion for the B4X family (B4A, B4i, B4J, B4R)** — IntelliSense · LSP · Type Inference · Diagnostics · Code Actions · Formatting · Theme Import · Project Management
 
 ![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A51.95-blue)
-![Version](https://img.shields.io/badge/version-0.1.260-green)
+![Version](https://img.shields.io/badge/version-0.1.270-green)
 ![Platforms](https://img.shields.io/badge/platforms-B4A%20%7C%20B4i%20%7C%20B4J%20%7C%20B4R-orange)
 
 ---
@@ -34,6 +34,7 @@ The extension **auto-discovers** platform INI configuration files for all four B
 | **Rename Symbol** | `F2` to rename a symbol with case preservation across all project files |
 | **Hover Documentation** | Hover to see signatures, descriptions, parameters, and return types |
 | **Signature Help** | Parameter hints inside Sub/function calls (triggered by `(` and `,`) |
+| **Ghost Text Completions** | Inline tab-acceptable completions for Sub calls with parameter hints |
 | **Semantic Token Highlighting** | Globals from `Class_Globals` and `Process_Globals` are colorized in methods |
 | **Local Symbol Completions** | Variables and Subs declared in the current file |
 | **Workspace Class Completions** | Classes and modules found across all open workspace `.bas` files |
@@ -49,6 +50,7 @@ The extension **auto-discovers** platform INI configuration files for all four B
 | **Keyword Casing** | Normalizes keyword casing (`end sub` → `End Sub`) with ALLCAPS preservation |
 | **Blank Line Management** | Collapses consecutive blank lines; ensures spacing between Subs |
 | **Un-Format Document** | Strip all leading indentation — left-align every line |
+| **Un-Format Selection** | Strip leading indentation from the selected lines only |
 | **Remove Blank Lines** | Delete every empty line, compact to a single code block |
 | **`#EndOfDesignText@` Awareness** | Designer header preserved verbatim; formatting starts below it |
 | **String & Comment Protection** | Never touches content inside `"strings"` or `'comments` |
@@ -59,9 +61,12 @@ The extension **auto-discovers** platform INI configuration files for all four B
 |---|---|
 | **B4X Syntax Highlighting** | Full TextMate grammar for all B4X keywords, types, and language constructs |
 | **Auto-Close Keywords** | Automatically inserts `End If`, `Next`, `End Select`, `End Try`, `End Sub` on Enter |
+| **Auto-Casing on Type** | Fixes keyword casing as you type (space, Enter, colon) |
 | **Code Folding** | Fold Sub/If/For/Select/Try/Do/While/Type/Region/Case/Catch blocks |
 | **100+ Code Snippets** | Type prefixes like `select`, `foreach`, `try`, `b4xpage`, `customview` + Tab |
 | **Indentation Rules** | Automatic indentation for nested blocks and statements |
+| **Smart Expand Selection** | Word → Line → Sub Block → Document |
+| **Symbol Highlighting** | Highlights all occurrences of the symbol under cursor (read vs. write access) |
 
 ### Diagnostics & Code Actions
 
@@ -71,7 +76,16 @@ The extension **auto-discovers** platform INI configuration files for all four B
 | **CallSub Validation** | Warns when `CallSub`/`CallSubDelayed` references a Sub that doesn't exist |
 | **Quick-fix Code Actions** | Moves misplaced `Type` blocks into the correct scope with one click |
 | **Extract Method** | Select code and extract it into a new Sub with inferred parameters (preview) |
+| **Insert Event Handler** | Generate event handler Sub templates |
 | **Code Lens** | Inline reference counts above each Sub declaration — click to trigger Find All References |
+
+### Document Links
+
+| Feature | Description |
+|---|---|
+| **Clickable `#AdditionalJar:` Paths** | Click to jump to the referenced JAR file |
+| **Clickable `LoadLayout("Name")` Paths** | Click to jump to the `.bal` layout file |
+| **Clickable `B4XPages.ShowPage("Name")` Paths** | Click to jump to the page module |
 
 ### LSP Backend
 
@@ -80,6 +94,7 @@ The extension **auto-discovers** platform INI configuration files for all four B
 | **Local Language Server** | Runs a Node.js LSP server via stdio for server-side analysis |
 | **Worker Pool Indexer** | Background file indexer with worker threads for fast symbol parsing |
 | **Rename Support** | Server-side rename refactoring across files |
+| **Extract Method** | Server-side method extraction with parameter inference |
 
 ### Library Support
 
@@ -90,6 +105,9 @@ The extension **auto-discovers** platform INI configuration files for all four B
 | **Project-scoped Filtering** | Reads the project's `<Libraries>` section; only allowed libraries are loaded |
 | **Persistent SQLite Index** | Caches library metadata on disk with safe atomic writes and migrations |
 | **Install + Additional Libraries** | Scans both the platform installation Libraries folder and AdditionalLibrariesFolder from INI |
+| **JAR-to-XML Generator** | Parses Java `.class` files from JAR archives to generate B4A-style XML metadata |
+| **Common Class Extraction** | `Log`, `Msgbox`, `StartActivity`, etc. callable without `Common.` prefix |
+| **Library Cache Management** | Refresh, show DB path, and clear cache commands |
 
 ### Project Management
 
@@ -119,6 +137,7 @@ The extension **auto-discovers** platform INI configuration files for all four B
 | **Capture Screenshots** | Capture a sequence of screenshots from a connected device |
 | **IntelliSense Diagnostics** | Dump full diagnostic JSON showing loaded libraries, classes, and resolution |
 | **Search Online** | Open B4X forum search for the word under cursor in the right context menu |
+| **Open B4X Website** | Open b4x.com in an embedded webview |
 
 ---
 
@@ -138,13 +157,7 @@ Right-click in any `.bas` or `.b4x` editor to access the **B4X Companion** subme
 | **Go to Implementation** | `Shift+F12` | Jump to the concrete implementation of a Sub in other modules |
 | **Go to Type Definition** | — | Jump to the class definition of a type (e.g., `Button` → Button XML class) |
 
-### External
-
-| Item | What it does |
-|---|---|
-| **Search Online** | Opens B4X forum search for the word under cursor, filtered by platform (B4A/B4J/B4i/B4R) |
-
-### Edit
+### Formatting
 
 | Item | Shortcut | What it does |
 |---|---|---|
@@ -152,13 +165,29 @@ Right-click in any `.bas` or `.b4x` editor to access the **B4X Companion** subme
 | **Format Selection** | — | Apply formatting to only the selected text range |
 | **Un-Format Selection** | — | Strip leading indentation from the selected lines only |
 | **Un-Format Document** | — | Strip all leading indentation from every line (left-align everything) |
-| **Block Comment** | — | Add `' ` prefix to each selected line (B4X comment style). Skips blank/already-commented lines |
-| **Un-Block Comment** | — | Remove leading `' ` prefix from each selected line. Skips non-comment lines |
-| **Remove Blank Lines** | — | Delete every empty line, compact the file to a single code block |
-| **Remove Comments** | — | Delete every comment-only line (lines starting with `'`), then auto-format |
+
+### Comments & Cleanup
+
+| Item | What it does |
+|---|---|
+| **Block Comment** | Add `' ` prefix to each selected line (B4X comment style). Skips blank/already-commented lines |
+| **Un-Block Comment** | Remove leading `' ` prefix from each selected line. Skips non-comment lines |
+| **Remove Blank Lines** | Delete every empty line, compact the file to a single code block |
+| **Remove Comments** | Delete every comment-only line (lines starting with `'`), then auto-format |
+
+### Tools
+
+| Item | Shortcut | What it does |
+|---|---|---|
 | **Quick Fix** | `Ctrl+.` | Show available code actions (Move Type block, Extract Method) |
 | **Trigger Suggestions** | `Ctrl+Space` | Manually trigger auto-complete suggestions |
 | **Parameter Hints** | `Ctrl+Shift+Space` | Show parameter list for the current Sub call |
+
+### External
+
+| Item | What it does |
+|---|---|
+| **Search Online** | Opens B4X forum search for the word under cursor, filtered by platform (B4A/B4J/B4i/B4R) |
 
 These items are **hidden from the Command Palette** (`Ctrl+Shift+P`) — they only appear in the right-click context menu.
 
@@ -194,6 +223,11 @@ These items are **hidden from the Command Palette** (`Ctrl+Shift+P`) — they on
 | **Capture GIF from Device** | | Record a GIF from a connected Android device |
 | **Capture Screenshots (Scroll)** | | Capture screenshot sequence from device |
 | **Run All Diagnostics** | | Dump state, stores, and diagnostics to JSON |
+| **Refresh Library Index** | | Force re-parse of all loaded library files |
+| **Show Library DB Path** | | Show the path to the SQLite library cache database |
+| **Clear Library Cache** | | Delete all cached library metadata |
+| **Backup Workspace** | | Create a backup of the current workspace |
+| **Set Platform Install Path** | | Manually configure a platform's install directory |
 
 ---
 
@@ -207,8 +241,10 @@ All settings are prefixed with `b4xIntellisense.` in VS Code.
 | `b4iIniPath` | *(auto-detected)* | Path to B4i `b4xV5.ini`. Leave empty for auto-discovery. |
 | `b4jIniPath` | *(auto-detected)* | Path to B4J `b4xV5.ini`. Leave empty for auto-discovery. |
 | `b4rIniPath` | *(auto-detected)* | Path to B4R `b4xV5.ini`. Leave empty for auto-discovery. |
-| `preferLiveSources` | `true` | Prefer live workspace/XML/.b4xlib sources over the bundled API index. |
 | `b4aInstallPath` | `C:\Program Files\Anywhere Software\B4A` | B4A installation folder (for theme import and builder). |
+| `b4iInstallPath` | `C:\Program Files (x86)\Anywhere Software\B4i` | B4i installation folder. |
+| `b4jInstallPath` | `C:\Program Files\Anywhere Software\B4J` | B4J installation folder. |
+| `b4rInstallPath` | `C:\Program Files\Anywhere Software\B4R` | B4R installation folder. |
 | `autoApplyIni` | `prompt` | Font/theme hint application: `prompt`, `always`, or `never`. |
 | `autoAddProjectFolderOnOpen` | `true` | Add project folder as workspace folder on Open B4X Project. |
 | `autoOpenProjectFolderOnOpen` | `false` | Replace workspace with project folder on Open B4X Project. |
@@ -222,6 +258,8 @@ All settings are prefixed with `b4xIntellisense.` in VS Code.
 | `disableConsoleOutput` | `true` | Suppress console output; use log file instead. |
 | `debug` | `false` | Append a timestamped debug log file for extension actions. |
 | `enableTelemetry` | `false` | Opt-in anonymous telemetry for basic feature usage. |
+| `adbPath` | *(auto-detected)* | Path to the adb executable for device operations. |
+| `ffmpegPath` | *(auto-detected)* | Path to the ffmpeg executable for GIF capture. |
 
 ---
 
@@ -248,7 +286,7 @@ From each INI file, the extension reads:
 
 ### Library Loading
 
-1. The opened project file (`.b4a`, `.b4i`, `.b4j`, `.b4r`) is parsed for its `<Libraries>` section.
+1. The opened project file (`.b4a`, `.b4i`, `.b4j`, `.b4r`) is parsed for its `LibraryN=` entries.
 2. Only libraries declared in the project are loaded (project-scoped filtering).
 3. For each library name, the extension searches installation and additional library folders for:
    - `.xml` descriptors → parsed for classes, methods, properties, and fields
@@ -257,13 +295,26 @@ From each INI file, the extension reads:
 
 ### IntelliSense Stores
 
-The extension maintains three in-memory class stores:
+The extension maintains four in-memory class stores:
 
-- **API Index** — bundled/generated API classes (optional, graceful fallback if absent)
-- **Workspace Classes** — classes from `.bas`/`.b4x` files in the workspace (updated on save/edit)
-- **XML Libraries** — classes parsed from XML library descriptors
+- **XML Libraries** (`XmlLibraryStore`) — classes parsed from XML library descriptors
+- **Workspace Classes** (`WorkspaceClassStore`) — classes from `.bas`/`.b4x` files in the workspace (updated on save/edit)
+- **Common Class** (`CommonClassStore`) — the `Common` class from Core.xml (`Log`, `Msgbox`, `StartActivity`, etc.) callable without prefix
+- **Primitive Types** (`PrimitiveTypeStore`) — synthetic class definitions for `Int`, `Float`, `Double`, `Long`, `Byte`, `Short`, `Boolean`, `Char`, `Object`, `String`, `StringBuilder`
 
-All three stores are queried for completions, hover, go-to-definition, and signature help.
+All four stores are queried for completions, hover, go-to-definition, and signature help.
+
+### Type Inference
+
+When you type `obj.`, the extension resolves the type of `obj` through:
+
+1. `Dim` declarations in the current file
+2. Sub parameter types
+3. Local symbol types
+4. Primitive type mappings
+5. Cross-file inference scanning workspace `.bas` files
+
+The resolved class is then looked up in both `WorkspaceClassStore` and `XmlLibraryStore` to provide member completions.
 
 ### Go to Definition Resolution Chain
 
@@ -286,7 +337,7 @@ Searches the entire current file (no scope filtering) plus all `.bas`/`.b4x` fil
 ## Syntax Highlighting & Snippets
 
 - **TextMate Grammar** — Full B4X syntax highlighting for keywords, types, strings, comments, regions, preprocessor directives, and more.
-- **Snippets** — Common B4X patterns: `Sub`, `If/Then`, `For/Next`, `Select Case`, `Try/Catch`, `Type`, and more.
+- **Snippets** — 100+ common B4X patterns: `Sub`, `If/Then`, `For/Next`, `Select Case`, `Try/Catch`, `Type`, `B4XPage`, `CustomView`, `SQL`, `XUI`, and platform-specific snippets.
 - **Semantic Tokens** — Variables from `Class_Globals` / `Process_Globals` receive additional semantic coloring when used inside methods.
 
 ---
@@ -305,39 +356,51 @@ Searches the entire current file (no scope filtering) plus all `.bas`/`.b4x` fil
 ```
 src/
   extension.ts                        – Main extension entry: activation, commands, providers
-  apiIndex.ts                         – Generated/bundled API index store
-  b4xAutoclose.ts                     – Auto-close keywords on Enter
+  b4xAutoclose.ts                     – Auto-close keywords and 3-line Try block on Enter
   b4xCodeLensProvider.ts              – Reference counts above Subs
   b4xDocParser.ts                     – Completion/cursor-context utilities
-  b4xDocumentFormattingProvider.ts    – Structural code formatter
+  b4xDocumentFormattingProvider.ts    – Structural code formatter (5-phase pipeline)
+  b4xDocumentHighlightProvider.ts     – Symbol highlighting (read vs. write access)
+  b4xDocumentLinkProvider.ts          – Clickable links (#AdditionalJar, LoadLayout, ShowPage)
+  b4xDocumentRangeFormattingProvider.ts – Range formatting delegation
   b4xDocumentSymbolProvider.ts        – Outline view / Ctrl+Shift+O
   b4xFoldingRangeProvider.ts          – Code folding
-  b4xLocalSymbols.ts                  – Local symbol extraction (Dim, Sub, etc.)
+  b4xImplementationProvider.ts        – Go to Implementation (find Sub definitions)
+  b4xInlineCompletionProvider.ts      – Ghost text completions with Tab accept
+  b4xLocalSymbols.ts                  – Local symbol extraction (Dim, Sub, Types)
+  b4xOnTypeFormattingProvider.ts      – Auto-casing on type (space, Enter, colon)
   b4xReferenceProvider.ts             – Find All References (on-disk search)
   b4xRenameProvider.ts                – F2 rename with case preservation
+  b4xSelectionRangeProvider.ts        – Smart Expand Selection (Word → Line → Block → Doc)
+  b4xTypeDefinitionProvider.ts        – Go to Type Definition (jump to class definition)
   b4xTypeInference.ts                 – Cross-file variable type inference engine
   b4xWorkspaceSymbolProvider.ts       – Ctrl+T workspace symbol search
   callSubDiagnostics.ts               – CallSub target validation
-  platformConfig.ts                   – Multi-platform INI auto-discovery
-  platformIni.ts                      – INI file parser
-  platformBuilders.ts                 – Platform builder configuration
-  projectFile.ts                      – .b4a/.b4i/.b4j/.b4r project parser
-  xmlLibraryIndex.ts                  – XML library descriptor parser
-  workspaceClassIndex.ts              – Workspace .bas/.b4x file indexer
-  b4xLibStore.ts                      – .b4xlib archive handling
-  typeDiagnostics.ts                  – Type placement diagnostics
-  typeCodeAction.ts                   – Quick-fix code action for Type blocks
-  extractMethodCodeAction.ts          – Extract Method refactoring
+  commonClassStore.ts                 – Common class extraction (Log, Msgbox, etc.)
+  extractMethodCodeAction.ts          – Extract Method refactoring code action
+  jarToXmlGenerator.ts                – JAR-to-XML bytecode parser for Java libraries
+  logging.ts                          – File-based logging with timestamps
   lspClient.ts                        – LSP client (connects to server/)
-  vssettingsImporter.ts               – .vssettings theme file import
+  platformBuilders.ts                 – Platform builder configuration (B4A/B4J)
+  platformConfig.ts                   – Multi-platform INI auto-discovery + Registry lookup
+  platformIni.ts                      – INI file parser (LibrariesFolder, AdditionalLibraries, etc.)
+  primitiveTypeStore.ts               – Primitive type mappings (Int, String, Boolean, etc.)
+  projectFile.ts                      – .b4a/.b4i/.b4j/.b4r project parser
+  typeCodeAction.ts                   – Quick-fix for misplaced Type blocks
+  typeDiagnostics.ts                  – Type placement diagnostics registration
+  typeDiagnosticsCore.ts              – Core diagnostic logic (findMisplacedTypeRanges)
   types.ts                            – Shared B4X type definitions
+  vssettingsImporter.ts               – .vssettings theme file import
+  workspaceClassIndex.ts              – Workspace .bas/.b4x file indexer
+  xmlLibraryIndex.ts                  – XML library descriptor parser
   storage/
-    libraryIndexSqlite.ts             – Persistent SQLite library cache
+    libraryIndexSqlite.ts             – Persistent SQLite library cache (3-tier fallback)
 
 server/
   server.js                           – LSP server (stdio transport)
   logger.js                           – Server-side logging
   indexer/
+    documentManager.js                – Document/text management with symbol tables
     fileSymbolParser.js               – .bas/.b4x file symbol extraction
     globalSymbolTable.js              – Cross-file symbol table
     extractMethod.js                  – Server-side Extract Method logic
@@ -346,13 +409,16 @@ server/
     workerTask.js                     – Worker task definitions
 
 snippets/
-  b4x.json                            – B4X code snippets
+  b4x.json                            – 100+ B4X code snippets
 
 syntaxes/
   b4x.tmLanguage.json                 – TextMate grammar for B4X
 
-src/
-  install.ps1                         – Build & Install script for B4A/B4J
+scripts/
+  tests/                              – Test scripts for type diagnostics, library index, etc.
+
+test/
+  sample workspace with .bas files    – Sample workspace for testing
 ```
 
 ---
