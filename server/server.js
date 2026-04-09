@@ -1,15 +1,35 @@
 #!/usr/bin/env node
 // LSP server for B4X IntelliSense (cleaned, with logging and persistence hooks)
 try {
-  const { createConnection, TextDocuments, ProposedFeatures } = require('vscode-languageserver');
+  const { createConnection, TextDocuments, ProposedFeatures, TextDocumentSyncKind } = require('vscode-languageserver');
   const { TextDocument } = require('vscode-languageserver-textdocument');
   const { DocumentManager } = require('./indexer/documentManager');
   const { WorkerPool } = require('./indexer/workerPool');
   const logger = require('./logger');
+  const fs = require('fs');
+  const pathMod = require('path');
+  const { pathToFileURL } = require('url');
 
   const docManager = new DocumentManager();
   const workerPool = new WorkerPool();
   let workspaceRoot = null;
+  let parseSequence = 0; // monotonic counter to discard stale worker results
+
+  /**
+   * Convert a file:// URI to a platform-native file path.
+   * Handles Windows drive letters (/C:/... -> C:/...) and Unix paths uniformly.
+   */
+  function uriToFilePath(uri) {
+    if (!uri.startsWith('file://')) return uri;
+    try {
+      const { pathToFileURL } = require('url');
+      const decoded = decodeURIComponent(new URL(uri).pathname);
+      // Strip leading slash for Windows paths like /C:/...
+      return decoded.replace(/^\/([A-Za-z]:)/, '$1');
+    } catch {
+      return uri.replace('file://', '');
+    }
+  }
 
   let connection;
   try {
@@ -28,51 +48,58 @@ try {
       const root = (params && (params.rootPath || params.rootUri)) || null;
       workspaceRoot = root;
       logger.info('initialize', { root });
-      try { docManager.loadFromDisk(root); } catch (e) { /* ignore */ }
+      // Start async disk load without blocking init response
+      docManager.loadFromDisk(root).catch((e) => {
+        logger.error('loadFromDisk.error', { error: e && (e.stack || e.message) });
+      });
     } catch (e) { /* ignore */ }
     return {
       capabilities: {
-        textDocumentSync: documents.syncKind,
+        textDocumentSync: TextDocumentSyncKind.Full,
         completionProvider: { resolveProvider: false },
         hoverProvider: true,
         definitionProvider: true,
         renameProvider: { prepareProvider: true },
-        semanticTokensProvider: {
-          legend: { tokenTypes: [], tokenModifiers: [] },
-          range: false,
-          full: false,
-        },
       },
     };
   });
 
+  // Document lifecycle handlers: indexing + diagnostics.
+  // With Full sync, onDidOpen fires then onDidChangeContent fires immediately with the same text.
+  // openDocument checks if already tracked to avoid redundant parsing.
   documents.onDidChangeContent((change) => {
-    try {
-      docManager.changeDocument(change.document.uri, change.document.getText());
-    } catch (err) { /* ignore indexing errors */ }
+    try { docManager.changeDocument(change.document.uri, change.document.getText()); } catch (err) { /* ignore */ }
+    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { /* ignore */ }
   });
 
   documents.onDidOpen((change) => {
-    try { docManager.openDocument(change.document.uri, change.document.getText()); } catch (err) { }
+    // Skip if already indexed by onDidChangeContent to avoid double-parsing
+    if (docManager.docs.has(change.document.uri)) return;
+    try { docManager.openDocument(change.document.uri, change.document.getText()); } catch (err) { /* ignore */ }
+    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { /* ignore */ }
   });
 
   documents.onDidClose((change) => {
-    try { docManager.closeDocument(change.document.uri); } catch (err) { }
+    try { docManager.closeDocument(change.document.uri); } catch (err) { /* ignore */ }
   });
 
   documents.onDidSave((change) => {
     try {
       const text = change.document.getText();
       const uri = change.document.uri;
+      const seq = ++parseSequence; // capture current sequence
       workerPool.queueParse(uri, text).then((res) => {
         if (res && res.symbols) {
-          try {
-            docManager.setSymbolsForUri(uri, res.symbols);
-            try { docManager.saveSnapshot(workspaceRoot, [uri]); } catch (_) { }
-          } catch (e) { }
+          // Discard stale results: only apply if no newer save has occurred
+          if (seq >= parseSequence) {
+            try {
+              docManager.setSymbolsForUri(uri, res.symbols);
+            } catch (e) { /* ignore */ }
+          }
         }
       }).catch(() => {});
-    } catch (err) { }
+    } catch (err) { /* ignore */ }
+    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { /* ignore */ }
   });
 
   connection.onCompletion(async (textDocumentPosition, token) => {
@@ -82,7 +109,17 @@ try {
         logger.info('completion.cancelled', { uri: textDocumentPosition && textDocumentPosition.textDocument && textDocumentPosition.textDocument.uri });
         return [];
       }
-      const prefix = '';
+      // Extract word at cursor position for contextual completions
+      const doc = documents.get(textDocumentPosition.textDocument.uri);
+      let prefix = '';
+      if (doc) {
+        const lines = doc.getText().split(/\r?\n/);
+        const line = lines[textDocumentPosition.position.line] || '';
+        const ch = textDocumentPosition.position.character;
+        let startIdx = ch;
+        while (startIdx > 0 && /[A-Za-z0-9_]/.test(line.charAt(startIdx - 1))) startIdx--;
+        prefix = line.substring(startIdx, ch);
+      }
       const raw = docManager.getCompletions(prefix) || [];
       const items = raw.slice(0, 100).map((s) => ({
         label: s.name,
@@ -90,7 +127,7 @@ try {
         detail: `${s.kind} — ${s.file}:${s.line + 1}`,
         data: { file: s.file, line: s.line },
       }));
-      logger.info('completion', { durationMs: Date.now() - start, resultCount: items.length });
+      logger.info('completion', { durationMs: Date.now() - start, resultCount: items.length, prefix });
       return items;
     } catch (err) {
       logger.error('completion.error', { error: err && (err.stack || err.message) });
@@ -120,10 +157,9 @@ try {
       if (!word) return { contents: { kind: 'plaintext', value: 'LSP scaffold running.' } };
       const def = docManager.findDefinition(word);
       if (def) {
-        const fs = require('fs');
         let snippet = '';
         try {
-          const content = fs.readFileSync(def.file, 'utf8');
+          const content = await fs.promises.readFile(def.file, 'utf8');
           const defLines = content.split(/\r?\n/);
           const from = Math.max(0, def.line - 2);
           const to = Math.min(defLines.length - 1, def.line + 2);
@@ -173,7 +209,7 @@ try {
     }
   });
 
-  connection.onRenameRequest((params) => {
+  connection.onRenameRequest(async (params, token) => {
     try {
       const doc = documents.get(params.textDocument.uri);
       if (!doc) return null;
@@ -187,48 +223,66 @@ try {
       if (!oldName || !newName) return null;
       const def = docManager.findDefinition(oldName);
       if (!def) return null;
-      const fs = require('fs');
-      const { pathToFileURL } = require('url');
-      const pathMod = require('path');
       const candidateFilePaths = new Set();
       for (const [uri, entry] of docManager.docs.entries()) {
-        try { const u = new URL(uri); const p = u.pathname.replace(/^\/(.:)/, '$1'); candidateFilePaths.add(pathMod.resolve(p)); } catch (_) { candidateFilePaths.add(pathMod.resolve(uri)); }
+        try {
+          const p = uriToFilePath(uri);
+          if (p) candidateFilePaths.add(pathMod.resolve(p));
+        } catch (_) { candidateFilePaths.add(pathMod.resolve(uri)); }
       }
       const sameNamed = docManager.global.getByExactName(oldName);
       for (const s of sameNamed) if (s.file) candidateFilePaths.add(pathMod.resolve(s.file));
       if (def.file) { candidateFilePaths.add(pathMod.resolve(def.file)); candidateFilePaths.add(pathMod.resolve(pathMod.dirname(def.file))); }
       const editsByUri = {};
-      const wordRegex = new RegExp('\\b' + oldName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'gi');
+      const escapedName = oldName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
       function isInQuotedString(lineText, matchIndex) { const before = lineText.substring(0, matchIndex); const dq = (before.match(/\"/g) || []).length; const sq = (before.match(/\'/g) || []).length; return ((dq % 2) === 1) || ((sq % 2) === 1); }
       function isCommentLine(lineText, matchIndex) { const idxA = lineText.indexOf("'"); const idxB = lineText.indexOf('//'); const commentIdx = (idxA === -1) ? idxB : (idxB === -1 ? idxA : Math.min(idxA, idxB)); return commentIdx !== -1 && commentIdx < matchIndex; }
       function preserveCase(matched, replacement) { if (matched.toUpperCase() === matched) return replacement.toUpperCase(); if (matched.toLowerCase() === matched) return replacement.toLowerCase(); if (/^[A-Z][a-z]/.test(matched)) return replacement.charAt(0).toUpperCase() + replacement.slice(1); return replacement; }
-      for (const filePath of candidateFilePaths) {
-        let content; try { content = fs.readFileSync(filePath, 'utf8'); } catch (_) { continue; }
-        let match; while ((match = wordRegex.exec(content)) !== null) {
-          const offset = match.index;
-          const before = content.substring(0, offset);
-          const startPos = (() => { const lines = before.split(/\r?\n/); const ln = lines.length - 1; const chPos = lines[lines.length - 1].length; return { line: ln, character: chPos }; })();
-          const endPos = (() => { const beforeMatch = content.substring(0, offset + match[0].length); const lines = beforeMatch.split(/\r?\n/); const ln = lines.length - 1; const chPos = lines[lines.length - 1].length; return { line: ln, character: chPos }; })();
-          const fileLines = content.split(/\r?\n/);
-          const lineText = fileLines[startPos.line] || '';
-          if (isInQuotedString(lineText, startPos.character) || isCommentLine(lineText, startPos.character)) continue;
-          const fileUri = pathToFileURL(filePath).toString(); if (!editsByUri[fileUri]) editsByUri[fileUri] = [];
-          editsByUri[fileUri].push({ range: { start: startPos, end: endPos }, newText: preserveCase(match[0], newName) });
+
+      // Process files with bounded concurrency to avoid overwhelming memory
+      const CONCURRENCY = 4;
+      const filePaths = [...candidateFilePaths];
+      let fileIndex = 0;
+      async function processNextFile() {
+        while (true) {
+          if (token && token.isCancellationRequested) return;
+          const idx = fileIndex++;
+          if (idx >= filePaths.length) return;
+          const filePath = filePaths[idx];
+          let content; try { content = await fs.promises.readFile(filePath, 'utf8'); } catch (_) { continue; }
+          // Create a fresh regex per file to avoid lastIndex state issues
+          const wordRegex = new RegExp('\\b' + escapedName + '\\b', 'gi');
+          let match; while ((match = wordRegex.exec(content)) !== null) {
+            const offset = match.index;
+            const before = content.substring(0, offset);
+            const startPos = (() => { const beforeLines = before.split(/\r?\n/); const ln = beforeLines.length - 1; const chPos = beforeLines[beforeLines.length - 1].length; return { line: ln, character: chPos }; })();
+            const endPos = (() => { const beforeMatch = content.substring(0, offset + match[0].length); const bmLines = beforeMatch.split(/\r?\n/); const ln = bmLines.length - 1; const chPos = bmLines[bmLines.length - 1].length; return { line: ln, character: chPos }; })();
+            const fileLines = content.split(/\r?\n/);
+            const lineText = fileLines[startPos.line] || '';
+            if (isInQuotedString(lineText, startPos.character) || isCommentLine(lineText, startPos.character)) continue;
+            const fileUri = pathToFileURL(filePath).toString(); if (!editsByUri[fileUri]) editsByUri[fileUri] = [];
+            editsByUri[fileUri].push({ range: { start: startPos, end: endPos }, newText: preserveCase(match[0], newName) });
+          }
         }
       }
+      // Launch CONCURRENCY workers that share the fileIndex counter
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, filePaths.length) }, () => processNextFile()));
+      if (token && token.isCancellationRequested) return null;
       if (Object.keys(editsByUri).length === 0) return null;
       return { changes: editsByUri };
-    } catch (err) { return null; }
+    } catch (err) {
+      logger.error('rename.error', { error: err && (err.stack || err.message) });
+      return null;
+    }
   });
 
   connection.onRequest('b4x/extractMethod', async (params, token) => {
     try {
       if (token && token.isCancellationRequested) { logger.info('extractMethod.cancelled', { file: params && params.uri }); return { cancelled: true }; }
       const uri = params.uri; const range = params.range; const newName = params.newName || 'ExtractedMethod'; if (!uri || !range) return null;
-      const fs = require('fs'); const { URL } = require('url'); const pathMod = require('path');
-      let filePath;
-      try { const u = new URL(uri); filePath = u.pathname.replace(/^\/(.:)/, '$1'); } catch (_) { filePath = uri; }
-      let content; try { content = fs.readFileSync(filePath, 'utf8'); } catch (err) { return null; }
+      const fs = require('fs'); const pathMod = require('path');
+      const filePath = uriToFilePath(uri) || uri;
+      let content; try { content = await fs.promises.readFile(filePath, 'utf8'); } catch (err) { return null; }
       let paramsToUse = params.params;
       if (!paramsToUse) {
         try {
@@ -265,24 +319,37 @@ try {
       const symbols = entry.symbols || [];
       for (const s of symbols) {
         const others = docManager.global.getByExactName(s.name).filter((o) => o.file !== s.file);
-        if (others.length > 0) diagnostics.push({ severity: 2, range: { start: { line: s.line, character: 0 }, end: { line: s.line, character: 200 } }, message: `Symbol '${s.name}' is also defined in other files (${others.map((o) => o.file).join(', ')})`, source: 'b4x-lsp' });
+        if (others.length > 0) {
+          const symLen = Math.max(s.name.length, 1);
+          diagnostics.push({ severity: 2, range: { start: { line: s.line, character: 0 }, end: { line: s.line, character: symLen } }, message: `Symbol '${s.name}' is also defined in other files (${others.map((o) => o.file).join(', ')})`, source: 'b4x-lsp' });
+        }
       }
       for (const s of symbols.filter((x) => x.kind === 'type')) {
         const lines = (entry.text || '').split(/\r?\n/);
         const startLine = Math.max(0, s.line - 6);
         let found = false;
         for (let i = startLine; i < s.line; i++) { const l = lines[i] || ''; if (/^\s*Sub\s+Class_/i.test(l) || /^\s*Sub\s+Process_Globals/i.test(l)) { found = true; break; } }
-        if (!found) diagnostics.push({ severity: 1, range: { start: { line: s.line, character: 0 }, end: { line: s.line, character: 200 } }, message: `Type '${s.name}' appears outside Class_Globals/Process_Globals (heuristic)`, source: 'b4x-lsp' });
+        if (!found) {
+          const lineLen = (lines[s.line] || '').length || 1;
+          diagnostics.push({ severity: 1, range: { start: { line: s.line, character: 0 }, end: { line: s.line, character: lineLen } }, message: `Type '${s.name}' appears outside Class_Globals/Process_Globals (heuristic)`, source: 'b4x-lsp' });
+        }
       }
       connection.sendDiagnostics({ uri, diagnostics });
     } catch (err) { }
   }
 
-  documents.onDidChangeContent((change) => { publishDiagnosticsForUri(change.document.uri); });
-  documents.onDidOpen((change) => { publishDiagnosticsForUri(change.document.uri); });
-  documents.onDidSave((change) => { publishDiagnosticsForUri(change.document.uri); });
-
   documents.listen(connection);
+  let shutdownRequested = false;
+  connection.onShutdown(() => {
+    shutdownRequested = true;
+    logger.info('shutdown', {});
+    try { workerPool.dispose(); } catch (_) { /* ignore */ }
+    return Promise.resolve();
+  });
+  connection.onExit(() => {
+    logger.info('exit', { shutdownRequested });
+    process.exit(0);
+  });
   connection.listen();
   console.log('LSP server started (stdio)');
 } catch (err) {

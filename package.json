@@ -2,7 +2,7 @@
   "name": "b4x-intellisense",
   "displayName": "VS Code B4X IDE Companion",
   "description": "Comprehensive IDE companion for the B4X family (B4A, B4i, B4J, B4R). Provides a complete developer toolkit for Visual Studio Code including a local LSP backend and fast workspace indexer with optional prebuilt API index. Delivers advanced language features (contextual completions, hover, go-to-definition, rename, signature help), cross-file type inference, persistent on-disk indexing with safe atomic writes and migrations, XML and library discovery, project-aware configuration via .b4a/.b4i/.b4j/.b4r files, and server-side refactor actions (Extract Method with preview). Includes diagnostics, code actions, platform INI/theme import, VS Code commands for project management, and an offline-first design that gracefully falls back to live workspace and installed libraries when a bundled API index is not present.",
-  "version": "0.1.270",
+  "version": "0.1.271",
   "publisher": "AneleMbangaMashy",
   "engines": {
     "vscode": "^1.95.0"
@@ -132,77 +132,77 @@
       },
       {
         "command": "b4xIntellisense.importThemeFromInstall",
-        "title": "B4X: Import Theme From B4X Install",
+        "title": "Import Theme From B4X Install",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.openSettings",
-        "title": "B4X: Open Extension Settings",
+        "title": "Open Extension Settings",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.openDocs",
-        "title": "B4X: Open Documentation",
+        "title": "Open Documentation",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.openB4X",
-        "title": "B4X: Open B4X Website",
+        "title": "Open B4X Website",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.installProject",
-        "title": "B4X: Build & Install Project (B4A / B4J)",
+        "title": "Build & Install Project (B4A / B4J)",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.captureGif",
-        "title": "B4X: Capture GIF from Device",
+        "title": "Capture GIF from Device",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.captureScreenshots",
-        "title": "B4X: Capture Screenshots (Scroll)",
+        "title": "Capture Screenshots (Scroll)",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.runDiagnostics",
-        "title": "B4X: Run All Diagnostics",
+        "title": "Run All Diagnostics",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.refreshLibraryIndex",
-        "title": "B4X: Refresh Library Index",
+        "title": "Refresh Library Index",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.showLibraryDbPath",
-        "title": "B4X: Show Library DB Path",
+        "title": "Show Library DB Path",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.clearLibraryCache",
-        "title": "B4X: Clear Library Cache",
+        "title": "Clear Library Cache",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.backupWorkspace",
-        "title": "B4X: Backup Workspace",
+        "title": "Backup Workspace",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.setB4aInstallPath",
-        "title": "B4X: Set Platform Install Path",
+        "title": "Set Platform Install Path",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.extractMethod",
-        "title": "B4X: Extract Method",
+        "title": "Extract Method",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.insertEventHandler",
-        "title": "B4X: Insert Event Handler",
+        "title": "Insert Event Handler",
         "category": "B4X Companion"
       }
     ],
@@ -473,17 +473,20 @@
           "when": "false"
         },
         {
-          "command": "b4xIntellisense.refreshLibraryIndex"
+          "command": "b4xIntellisense.refreshLibraryIndex",
+          "when": "false"
         },
         {
-          "command": "b4xIntellisense.clearLibraryCache"
+          "command": "b4xIntellisense.clearLibraryCache",
+          "when": "false"
         },
         {
           "command": "b4xIntellisense.backupWorkspace",
           "when": "b4x.hasBuildableProject"
         },
         {
-          "command": "b4xIntellisense.setB4aInstallPath"
+          "command": "b4xIntellisense.setB4aInstallPath",
+          "when": "false"
         },
         {
           "command": "b4xIntellisense.showLibraryDbPath",
@@ -650,12 +653,11 @@
     "prebuild": "node ./scripts/bump-version.js",
     "build": "npm run compile",
     "watch": "tsc -w -p .",
-    "test": "npm run compile && node ./dist/scripts/tests/test-type-diagnostics.js",
-    "test:storage": "npm run compile && node ./dist/scripts/tests/test-library-index.js",
+    "test": "tsc -p tsconfig.tests.json && node ./dist/scripts/tests/test-type-diagnostics.js",
+    "test:storage": "tsc -p tsconfig.tests.json && node ./dist/scripts/tests/test-library-index.js",
     "start-lsp": "node server/server.js",
-    "test-indexer": "node server/indexer/tests/run-tests.js",
-    "inspect-index": "node server/indexer/inspect-index.js . --print",
-    "inspect-index:repair": "node server/indexer/inspect-index.js . --repair",
+    "inspect-index": "echo 'inspect-index requires server/indexer/inspect-index.js — not yet migrated'",
+    "inspect-index:repair": "echo 'inspect-index:repair requires server/indexer/inspect-index.js — not yet migrated'",
     "vscode:prepublish": "npm run compile",
     "rebuild:electron": "node ./scripts/rebuild-electron.js",
     "package:vsix": "npm run build && npm run rebuild:electron && npx vsce package"

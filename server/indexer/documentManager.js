@@ -15,8 +15,9 @@ class DocumentManager {
 
   /**
    * Scan .bas / .b4x files from a workspace root and index them.
+   * Uses async fs APIs to avoid blocking the event loop.
    */
-  loadFromDisk(root) {
+  async loadFromDisk(root) {
     if (!root) return;
     let rootPath = root;
     // Handle file:// URIs
@@ -29,10 +30,10 @@ class DocumentManager {
     }
     if (!fs.existsSync(rootPath)) return;
 
-    const files = this._walkDir(rootPath);
+    const files = await this._walkDir(rootPath);
     for (const filePath of files) {
       try {
-        const text = fs.readFileSync(filePath, 'utf8');
+        const text = await fs.promises.readFile(filePath, 'utf8');
         const symbols = parseFile(text, filePath);
         const uri = this._pathToUri(filePath);
         this.docs.set(uri, { text, symbols });
@@ -56,21 +57,17 @@ class DocumentManager {
   }
 
   closeDocument(uri) {
-    const entry = this.docs.get(uri);
-    if (entry && entry.symbols) {
-      const filePath = this._uriToPath(uri);
-      this.global.removeFile(filePath);
-    }
+    // Remove from open docs map but keep symbols in global table.
+    // The file was indexed by loadFromDisk and its symbols remain valid
+    // since the file still exists on disk. This ensures completions and
+    // go-to-definition continue working for closed files.
     this.docs.delete(uri);
   }
 
   setSymbolsForUri(uri, symbols) {
     const entry = this.docs.get(uri);
-    if (entry) {
-      entry.symbols = symbols;
-    } else {
-      this.docs.set(uri, { text: '', symbols });
-    }
+    if (!entry) return; // only update documents that are actually open
+    entry.symbols = symbols;
     this.global.applyFileSymbols(symbols);
   }
 
@@ -93,11 +90,26 @@ class DocumentManager {
 
   // ── helpers ────────────────────────────────────────────────────────────
 
-  _walkDir(dir) {
+  /**
+   * Recursively walk a directory for .bas/.b4x files.
+   * Uses async fs APIs and tracks visited real paths to prevent symlink cycles.
+   */
+  async _walkDir(dir, visitedRealPaths) {
     const results = [];
+    // Track real paths to detect symlink cycles
+    if (!visitedRealPaths) visitedRealPaths = new Set();
+    let realDir;
+    try {
+      realDir = await fs.promises.realpath(dir);
+    } catch {
+      return results;
+    }
+    if (visitedRealPaths.has(realDir)) return results;
+    visitedRealPaths.add(realDir);
+
     let entries;
     try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
+      entries = await fs.promises.readdir(dir, { withFileTypes: true });
     } catch {
       return results;
     }
@@ -106,8 +118,9 @@ class DocumentManager {
       if (entry.isDirectory()) {
         // skip common non-source dirs
         if (entry.name === 'node_modules' || entry.name === '.git') continue;
-        results.push(...this._walkDir(full));
-      } else if (/\.(bas|b4x)$/i.test(entry.name)) {
+        const subResults = await this._walkDir(full, visitedRealPaths);
+        results.push(...subResults);
+      } else if (entry.isFile() && /\.(bas|b4x)$/i.test(entry.name)) {
         results.push(full);
       }
     }

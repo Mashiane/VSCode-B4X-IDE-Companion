@@ -1,33 +1,87 @@
 // In-memory global symbol table for quick prefix searches and lookups.
+// Uses a trie (prefix tree) for O(prefix-length) lookups instead of O(n) linear scan.
+// Supports incremental updates: only affected trie nodes are modified, not the entire trie.
+
+class TrieNode {
+  constructor() {
+    this.children = new Map();
+    this.symbolIds = new Set(); // symbol IDs stored at this leaf
+  }
+}
 
 class GlobalSymbolTable {
   constructor() {
-    this.byName = new Map(); // name (lower) -> [{ name, kind, file, line }]
+    this.byName = new Map(); // name (lower) -> [{ name, kind, file, line, _id }]
+    this._trie = new TrieNode();
+    this._symbolId = 0; // monotonically increasing symbol ID
+    this._symbolStore = new Map(); // id -> symbol
+    this._fileToIds = new Map(); // filePath -> Set<symbolId>
   }
 
   applyFileSymbols(fileSymbols) {
-    // Remove previous entries for this file
-    const touchedFiles = new Set(fileSymbols.map((s) => s.file));
-    for (const [name, arr] of this.byName.entries()) {
-      const filtered = arr.filter((s) => !touchedFiles.has(s.file));
-      if (filtered.length === 0) this.byName.delete(name);
-      else this.byName.set(name, filtered);
+    if (!fileSymbols || fileSymbols.length === 0) return;
+
+    const filePath = fileSymbols[0].file;
+
+    // Step 1: Remove previous entries for this file from byName and trie
+    const oldIds = this._fileToIds.get(filePath);
+    if (oldIds) {
+      for (const id of oldIds) {
+        const sym = this._symbolStore.get(id);
+        if (sym) {
+          const key = sym.name.toLowerCase();
+          const arr = this.byName.get(key);
+          if (arr) {
+            const idx = arr.findIndex((s) => s._id === id);
+            if (idx !== -1) arr.splice(idx, 1);
+            if (arr.length === 0) {
+              this.byName.delete(key);
+              this._removeFromTrie(key, id);
+            }
+          }
+          this._symbolStore.delete(id);
+        }
+      }
+      this._fileToIds.delete(filePath);
     }
 
-    // Add new
+    // Step 2: Add new entries to byName, trie, and symbol store
+    const newIds = new Set();
     for (const sym of fileSymbols) {
+      const id = ++this._symbolId;
+      sym._id = id;
+      this._symbolStore.set(id, sym);
+      newIds.add(id);
+
       const key = sym.name.toLowerCase();
       if (!this.byName.has(key)) this.byName.set(key, []);
       this.byName.get(key).push(sym);
+      this._insertIntoTrie(key, id);
     }
+    this._fileToIds.set(filePath, newIds);
   }
 
   removeFile(filePath) {
-    for (const [name, arr] of this.byName.entries()) {
-      const filtered = arr.filter((s) => s.file !== filePath);
-      if (filtered.length === 0) this.byName.delete(name);
-      else this.byName.set(name, filtered);
+    const ids = this._fileToIds.get(filePath);
+    if (!ids) return;
+
+    for (const id of ids) {
+      const sym = this._symbolStore.get(id);
+      if (sym) {
+        const key = sym.name.toLowerCase();
+        const arr = this.byName.get(key);
+        if (arr) {
+          const idx = arr.findIndex((s) => s._id === id);
+          if (idx !== -1) arr.splice(idx, 1);
+          if (arr.length === 0) {
+            this.byName.delete(key);
+            this._removeFromTrie(key, id);
+          }
+        }
+        this._symbolStore.delete(id);
+      }
     }
+    this._fileToIds.delete(filePath);
   }
 
   getByExactName(name) {
@@ -36,17 +90,51 @@ class GlobalSymbolTable {
 
   getByPrefix(prefix, limit = 50) {
     const p = prefix.toLowerCase();
+    // Walk the trie to the prefix node
+    let node = this._trie;
+    for (const ch of p) {
+      if (!node.children.has(ch)) return []; // no match
+      node = node.children.get(ch);
+    }
+    // Collect all symbols under this node
     const results = [];
-    for (const [name, arr] of this.byName.entries()) {
-      if (name.startsWith(p)) {
-        for (const s of arr) {
-          results.push(s);
-          if (results.length >= limit) return results;
-        }
+    this._collectSymbols(node, results, limit);
+    return results;
+  }
+
+  // ── Trie internals ─────────────────────────────────────────────────────
+
+  _insertIntoTrie(lowerName, symbolId) {
+    let node = this._trie;
+    for (const ch of lowerName) {
+      if (!node.children.has(ch)) node.children.set(ch, new TrieNode());
+      node = node.children.get(ch);
+    }
+    node.symbolIds.add(symbolId);
+  }
+
+  _removeFromTrie(lowerName, symbolId) {
+    let node = this._trie;
+    for (const ch of lowerName) {
+      if (!node.children.has(ch)) return; // path doesn't exist
+      node = node.children.get(ch);
+    }
+    node.symbolIds.delete(symbolId);
+  }
+
+  _collectSymbols(node, results, limit) {
+    if (results.length >= limit) return;
+    for (const id of node.symbolIds) {
+      const sym = this._symbolStore.get(id);
+      if (sym) {
+        results.push(sym);
+        if (results.length >= limit) return;
       }
     }
-
-    return results;
+    for (const child of node.children.values()) {
+      if (results.length >= limit) return;
+      this._collectSymbols(child, results, limit);
+    }
   }
 }
 

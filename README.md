@@ -3,7 +3,7 @@
 > **Comprehensive IDE companion for the B4X family (B4A, B4i, B4J, B4R)** — IntelliSense · LSP · Type Inference · Diagnostics · Code Actions · Formatting · Theme Import · Project Management
 
 ![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A51.95-blue)
-![Version](https://img.shields.io/badge/version-0.1.270-green)
+![Version](https://img.shields.io/badge/version-0.1.271-green)
 ![Platforms](https://img.shields.io/badge/platforms-B4A%20%7C%20B4i%20%7C%20B4J%20%7C%20B4R-orange)
 
 ---
@@ -105,7 +105,6 @@ The extension **auto-discovers** platform INI configuration files for all four B
 | **Project-scoped Filtering** | Reads the project's `<Libraries>` section; only allowed libraries are loaded |
 | **Persistent SQLite Index** | Caches library metadata on disk with safe atomic writes and migrations |
 | **Install + Additional Libraries** | Scans both the platform installation Libraries folder and AdditionalLibrariesFolder from INI |
-| **JAR-to-XML Generator** | Parses Java `.class` files from JAR archives to generate B4A-style XML metadata |
 | **Common Class Extraction** | `Log`, `Msgbox`, `StartActivity`, etc. callable without `Common.` prefix |
 | **Library Cache Management** | Refresh, show DB path, and clear cache commands |
 
@@ -216,18 +215,18 @@ These items are **hidden from the Command Palette** (`Ctrl+Shift+P`) — they on
 |---|---|---|
 | **Open B4X Project…** | | Select and open a B4X project file |
 | **Build & Install Project** | | Build via B4ABuilder.exe/B4JBuilder.exe and install to device |
-| **Import Theme From B4A Install** | | Pick and import a `.vssettings` theme from B4A Themes/ |
+| **Import Theme From B4X Install** | | Pick and import a `.vssettings` theme from B4X Themes/ |
 | **Open Extension Settings** | | Open VS Code Settings filtered to B4X Companion |
 | **Open Documentation** | `Ctrl+Shift+H` | Open the README or User Manual |
 | **Open B4X Website** | | Open b4x.com in an embedded webview |
 | **Capture GIF from Device** | | Record a GIF from a connected Android device |
 | **Capture Screenshots (Scroll)** | | Capture screenshot sequence from device |
 | **Run All Diagnostics** | | Dump state, stores, and diagnostics to JSON |
-| **Refresh Library Index** | | Force re-parse of all loaded library files |
-| **Show Library DB Path** | | Show the path to the SQLite library cache database |
-| **Clear Library Cache** | | Delete all cached library metadata |
 | **Backup Workspace** | | Create a backup of the current workspace |
-| **Set Platform Install Path** | | Manually configure a platform's install directory |
+| **Extract Method** | | Extract selected code into a new Sub with inferred parameters |
+| **Insert Event Handler** | | Generate event handler Sub templates |
+
+> **Note:** Some commands are hidden from the Command Palette and are only accessible via the editor context menu (right-click → B4X Companion). These include navigation commands (Go to Definition, Find References, etc.), formatting commands, and utility commands. Technical maintenance commands (Refresh Library Index, Clear Library Cache, Set Platform Install Path) are also hidden to reduce clutter.
 
 ---
 
@@ -378,7 +377,6 @@ src/
   callSubDiagnostics.ts               – CallSub target validation
   commonClassStore.ts                 – Common class extraction (Log, Msgbox, etc.)
   extractMethodCodeAction.ts          – Extract Method refactoring code action
-  jarToXmlGenerator.ts                – JAR-to-XML bytecode parser for Java libraries
   logging.ts                          – File-based logging with timestamps
   lspClient.ts                        – LSP client (connects to server/)
   platformBuilders.ts                 – Platform builder configuration (B4A/B4J)
@@ -434,6 +432,31 @@ test/
 
 See [CHANGELOG.md](https://github.com/Mashiane/VSCode-B4X-IDE-Companion/blob/HEAD/CHANGELOG.md) for full release history.
 
+### 0.1.271
+
+- **Removed JAR-to-XML Generator** - Cleaned out Java bytecode parsing feature from extension scope
+- **Command Palette Cleanup** - Hidden technical maintenance commands: Refresh Library Index, Clear Library Cache, Set Platform Install Path
+- **Removed "B4X: " prefix** from all command titles for cleaner display
+
+### 0.1.270
+
+- **Go to Implementation** — Jump to concrete Sub implementations across workspace modules
+- **Go to Type Definition** — Jump from type name to its class definition (e.g., `Button` → Button XML class)
+- **Document Link Provider** — Clickable links for `#AdditionalJar:` paths, `LoadLayout("Name")` → `.bal` files, `B4XPages.ShowPage("Name")` → page modules
+- **Inline Completion Provider** — Ghost text completions with Tab accept for Sub calls
+- **Document Highlight Provider** — Highlights all occurrences of symbol under cursor with read/write distinction
+- **Selection Range Provider** — Smart expand selection: Word → Line → Sub Block → Document
+- **On-Type Formatting** — Auto-casing of keywords as you type (space, Enter, colon triggers)
+- **Insert Event Handler** — Generate event handler Sub templates via command
+- **Range Formatting** — Format only selected text range, not entire document
+- **Common Class Store** — Dedicated extraction of Common class globals (`Log`, `Msgbox`, etc.)
+- **Primitive Type Store** — Dedicated store for primitive type mappings and synthetic class definitions
+- **Block Comment / Un-Block Comment** — Comment/uncomment selected lines with B4X `'` style
+- **Format Selection / Un-Format Selection** — Apply/remove formatting to selected range only
+- **Command Palette Cleanup** — Hidden technical commands: Refresh Library Index, Clear Library Cache, Set Platform Install Path
+- **3-Tier SQLite Fallback** — better-sqlite3 (native) → sql.js (WASM) → in-memory fallback
+- **File-based Logging** — Timestamped log files (`b4x-log-YYYYMMDD.txt`) with workspace root or global storage
+
 ### 0.1.258
 
 - **Structural Code Formatter** — VB.NET-quality indentation tracking for all B4X block constructs (`Sub/End Sub`, `If/End If`, `For/Next`, `Select/End Select`, `Try/Catch/End Try`, `Do/Loop`, `#Region/#End Region`, `#If/#End If`), keyword casing normalization, blank line management
@@ -448,7 +471,7 @@ See [CHANGELOG.md](https://github.com/Mashiane/VSCode-B4X-IDE-Companion/blob/HEA
 - **Hover Action Links** — Go to Definition, Find All References, and Search Online in hover tooltips
 - **Un-Format Document** — Strip all leading indentation
 - **Remove Blank Lines** — Compact file to single block
-- **B4X Companion Context Menu** — Right-click submenu with 21 commands (navigation, formatting, commenting, tools, external)
+- **B4X Companion Context Menu** — Right-click submenu with commands organized by category (Navigation, Formatting, Comments, Cleanup, Tools, External)
 - **Search Online** — B4X forum search from context menu for word under cursor
 - **Peek Definition** — `Alt+F12` inline definition peek
 

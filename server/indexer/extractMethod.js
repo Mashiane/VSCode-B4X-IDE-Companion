@@ -1,13 +1,16 @@
 // Helper to create a WorkspaceEdit for Extract Method refactoring.
-// Simple strategy:
-// - Given a file path and a selection range (start/end line+character) extract the selected text
-// - Create a new Sub with provided name at the end of the file
-// - Replace selection with a call to the new Sub (with parentheses)
+// Strategy:
+// - Given a file path and a selection range, extract the selected text
+// - Create a new Sub at the end of the file
+// - Replace selection with a call to the new Sub
+
+const { pathToFileURL } = require('url');
+const pathMod = require('path');
 
 function createExtractMethodEdit(filePath, selection, newName, fileContent, params) {
   const lines = fileContent.split(/\r?\n/);
-    const start = selection.start || { line: 0, character: 0 };
-    const end = selection.end || { line: 0, character: 0 };
+  const start = selection.start || { line: 0, character: 0 };
+  const end = selection.end || { line: 0, character: 0 };
 
   // Extract text
   const extractedLines = lines.slice(start.line, end.line + 1);
@@ -22,21 +25,21 @@ function createExtractMethodEdit(filePath, selection, newName, fileContent, para
   const extractedText = extractedLines.join('\n');
 
   // Build new Sub text
-    // params may be array of names or objects {name,type}
-    const paramList = (params && params.length) ? params.map(p => (typeof p === 'string' ? p : p.name)).join(', ') : '';
-    const paramDecls = (params && params.length) ? params.map(p => (typeof p === 'string' ? `${p} As Object` : `${p.name} As ${p.type}`)).join(', ') : '';
-    const subLines = [`Sub ${newName}${paramDecls ? '(' + paramDecls + ')' : '()'}`];
+  // params may be array of names or objects {name,type}
+  const paramList = (params && params.length) ? params.map(p => (typeof p === 'string' ? p : p.name)).join(', ') : '';
+  const paramDecls = (params && params.length) ? params.map(p => (typeof p === 'string' ? `${p} As Object` : `${p.name} As ${p.type}`)).join(', ') : '';
+  const subLines = [`Sub ${newName}${paramDecls ? '(' + paramDecls + ')' : '()'}`];
   // indent the extracted text by two spaces
   for (const l of extractedLines) subLines.push(`  ${l}`);
   subLines.push('End Sub');
 
   const newSubText = subLines.join('\n');
 
-  // Replacement for selection: call the new method
-    const callText = `${newName}(${paramList})`;
+  // Replacement for selection: use B4X's no-parens call syntax when there are params,
+  // which is more idiomatic. For zero-param calls, use parentheses.
+  const callText = paramList ? `${newName} ${paramList}` : `${newName}()`;
 
-  const { pathToFileURL } = require('url');
-  const fileUri = pathToFileURL(require('path').resolve(filePath)).toString();
+  const fileUri = pathToFileURL(pathMod.resolve(filePath)).toString();
 
   const edits = {};
   edits[fileUri] = [];
