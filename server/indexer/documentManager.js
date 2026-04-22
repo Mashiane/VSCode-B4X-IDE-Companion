@@ -17,20 +17,41 @@ class DocumentManager {
    * Scan .bas / .b4x files from a workspace root and index them.
    * Uses async fs APIs to avoid blocking the event loop.
    */
-  async loadFromDisk(root) {
-    if (!root) return;
+  async loadFromDisk(root, connection) {
+    const tryNotifyDone = () => {
+      if (connection && typeof connection.sendNotification === 'function') {
+        try { connection.sendNotification('b4x/indexing', { phase: 'done', processed: 0, total: 0 }); } catch { /* ignore */ }
+      }
+    };
+
+    if (!root) return tryNotifyDone();
+
     let rootPath = root;
     // Handle file:// URIs
     if (rootPath.startsWith('file://')) {
       try {
-        rootPath = new URL(rootPath).pathname.replace(/^\/(.:)/, '$1');
+        const decoded = decodeURIComponent(new URL(rootPath).pathname);
+        rootPath = decoded.replace(/^\/([A-Za-z]:)/, '$1');
       } catch {
         rootPath = rootPath.replace('file://', '');
       }
     }
-    if (!fs.existsSync(rootPath)) return;
+    
+    if (!fs.existsSync(rootPath)) return tryNotifyDone();
 
     const files = await this._walkDir(rootPath);
+
+    // Notify client that indexing is starting (if the server connection was passed)
+    if (connection && typeof connection.sendNotification === 'function') {
+      try {
+        connection.sendNotification('b4x/indexing', { phase: 'start', total: files.length });
+      } catch {
+        // ignore notification failures
+      }
+    }
+
+    let processed = 0;
+    let lastSent = Date.now();
     for (const filePath of files) {
       try {
         const text = await fs.promises.readFile(filePath, 'utf8');
@@ -40,6 +61,29 @@ class DocumentManager {
         this.global.applyFileSymbols(symbols);
       } catch {
         // skip unreadable files
+      }
+      processed++;
+
+      // Send progress updates periodically (every 20 files or 1s)
+      if (connection && typeof connection.sendNotification === 'function') {
+        const now = Date.now();
+        if (processed % 20 === 0 || now - lastSent > 1000) {
+          try {
+            connection.sendNotification('b4x/indexing', { phase: 'progress', processed, total: files.length });
+          } catch {
+            // ignore
+          }
+          lastSent = now;
+        }
+      }
+    }
+
+    // Final notification
+    if (connection && typeof connection.sendNotification === 'function') {
+      try {
+        connection.sendNotification('b4x/indexing', { phase: 'done', processed: files.length, total: files.length });
+      } catch {
+        // ignore
       }
     }
   }
@@ -57,11 +101,9 @@ class DocumentManager {
   }
 
   closeDocument(uri) {
-    // Remove from open docs map but keep symbols in global table.
-    // The file was indexed by loadFromDisk and its symbols remain valid
-    // since the file still exists on disk. This ensures completions and
-    // go-to-definition continue working for closed files.
+    // Remove from open docs map and synchronize with global table.
     this.docs.delete(uri);
+    this.global.removeFile(this._uriToPath(uri));
   }
 
   setSymbolsForUri(uri, symbols) {

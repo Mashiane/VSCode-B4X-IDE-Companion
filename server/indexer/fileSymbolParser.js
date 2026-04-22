@@ -8,6 +8,7 @@ function parseFile(text, filePath) {
   const subRegex = /^\s*Sub\s+([A-Za-z_][A-Za-z0-9_]*)/i;
   const typeRegex = /^\s*Type\s+([A-Za-z_][A-Za-z0-9_]*)/i;
   const classRegex = /^\s*Sub\s+Class_?\s*([A-Za-z_][A-Za-z0-9_]*)/i;
+  const dimRegex = /^\s*Dim\s+([A-Za-z_][A-Za-z0-9_]*)/i;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -27,6 +28,12 @@ function parseFile(text, filePath) {
     m = subRegex.exec(line);
     if (m) {
       symbols.push({ kind: 'sub', name: m[1], line: i, file: filePath });
+      continue;
+    }
+
+    m = dimRegex.exec(line);
+    if (m) {
+      symbols.push({ kind: 'variable', name: m[1], line: i, file: filePath });
       continue;
     }
   }

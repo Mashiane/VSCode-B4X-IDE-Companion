@@ -48,8 +48,10 @@ try {
       const root = (params && (params.rootPath || params.rootUri)) || null;
       workspaceRoot = root;
       logger.info('initialize', { root });
-      // Start async disk load without blocking init response
-      docManager.loadFromDisk(root).catch((e) => {
+      // Start async disk load without blocking init response. Pass the
+      // language-server connection so the indexer can notify the client
+      // about progress (start/progress/done).
+      docManager.loadFromDisk(root, connection).catch((e) => {
         logger.error('loadFromDisk.error', { error: e && (e.stack || e.message) });
       });
     } catch (e) { /* ignore */ }
