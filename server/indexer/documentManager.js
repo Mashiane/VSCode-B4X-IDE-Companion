@@ -17,7 +17,7 @@ class DocumentManager {
    * Scan .bas / .b4x files from a workspace root and index them.
    * Uses async fs APIs to avoid blocking the event loop.
    */
-  async loadFromDisk(root, connection) {
+  async loadFromDisk(root, connection, workerPool) {
     const tryNotifyDone = () => {
       if (connection && typeof connection.sendNotification === 'function') {
         try { connection.sendNotification('b4x/indexing', { phase: 'done', processed: 0, total: 0 }); } catch { /* ignore */ }
@@ -25,6 +25,9 @@ class DocumentManager {
     };
 
     if (!root) return tryNotifyDone();
+
+    // 1. Attempt to load snapshot first for instant basic intellisense
+    await this.loadSnapshot(root);
 
     let rootPath = root;
     // Handle file:// URIs
@@ -36,7 +39,7 @@ class DocumentManager {
         rootPath = rootPath.replace('file://', '');
       }
     }
-    
+
     if (!fs.existsSync(rootPath)) return tryNotifyDone();
 
     const files = await this._walkDir(rootPath);
@@ -52,31 +55,50 @@ class DocumentManager {
 
     let processed = 0;
     let lastSent = Date.now();
-    for (const filePath of files) {
-      try {
-        const text = await fs.promises.readFile(filePath, 'utf8');
-        const symbols = parseFile(text, filePath);
-        const uri = this._pathToUri(filePath);
-        this.docs.set(uri, { text, symbols });
-        this.global.applyFileSymbols(symbols);
-      } catch {
-        // skip unreadable files
-      }
-      processed++;
+    const CONCURRENCY = 8;
+    let fileIndex = 0;
 
-      // Send progress updates periodically (every 20 files or 1s)
-      if (connection && typeof connection.sendNotification === 'function') {
-        const now = Date.now();
-        if (processed % 20 === 0 || now - lastSent > 1000) {
-          try {
-            connection.sendNotification('b4x/indexing', { phase: 'progress', processed, total: files.length });
-          } catch {
-            // ignore
+    async function processFile() {
+      while (true) {
+        const idx = fileIndex++;
+        if (idx >= files.length) return;
+
+        const filePath = files[idx];
+        try {
+          const text = await fs.promises.readFile(filePath, 'utf8');
+          const uri = this._pathToUri(filePath);
+
+          // Use WorkerPool for parallel parsing
+          const { symbols } = await workerPool.queueParse(uri, text);
+
+          this.docs.set(uri, { text, symbols });
+          this.global.applyFileSymbols(symbols);
+        } catch (e) {
+          // skip unreadable files or parse errors
+        }
+
+        processed++;
+
+        // Send progress updates periodically
+        if (connection && typeof connection.sendNotification === 'function') {
+          const now = Date.now();
+          if (processed % 20 === 0 || now - lastSent > 1000) {
+            try {
+              connection.sendNotification('b4x/indexing', { phase: 'progress', processed, total: files.length });
+            } catch {
+              // ignore
+            }
+            lastSent = now;
           }
-          lastSent = now;
         }
       }
     }
+
+    // Bind the context so 'this' refers to DocumentManager instance inside the loop
+    const boundProcessFile = processFile.bind(this);
+
+    // Run with bounded concurrency
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, files.length) }, () => boundProcessFile()));
 
     // Final notification
     if (connection && typeof connection.sendNotification === 'function') {
@@ -113,12 +135,38 @@ class DocumentManager {
     this.global.applyFileSymbols(symbols);
   }
 
-  /**
-   * Persist a snapshot to disk. Currently a no-op — can be wired up to write
-   * a JSON cache file for faster cold-start in the future.
-   */
-  saveSnapshot(_root, _uris) {
-    // intentional no-op
+  async saveSnapshot(root) {
+    if (!root) return;
+    try {
+      let rootPath = root;
+      if (rootPath.startsWith('file://')) {
+        const decoded = decodeURIComponent(new URL(rootPath).pathname);
+        rootPath = decoded.replace(/^\/([A-Za-z]:)/, '$1');
+      }
+      const snapshotPath = path.join(rootPath, '.b4x-index.json');
+      const data = this.global.serialize();
+      await fs.promises.writeFile(snapshotPath, data, 'utf8');
+    } catch (e) {
+      // ignore snapshot save errors
+    }
+  }
+
+  async loadSnapshot(root) {
+    if (!root) return;
+    try {
+      let rootPath = root;
+      if (rootPath.startsWith('file://')) {
+        const decoded = decodeURIComponent(new URL(rootPath).pathname);
+        rootPath = decoded.replace(/^\/([A-Za-z]:)/, '$1');
+      }
+      const snapshotPath = path.join(rootPath, '.b4x-index.json');
+      if (fs.existsSync(snapshotPath)) {
+        const data = await fs.promises.readFile(snapshotPath, 'utf8');
+        this.global.deserialize(data);
+      }
+    } catch (e) {
+      // ignore snapshot load errors
+    }
   }
 
   getCompletions(prefix) {
@@ -181,7 +229,7 @@ class DocumentManager {
   _uriToPath(uri) {
     if (!uri.startsWith('file://')) return uri;
     try {
-      return new URL(uri).pathname.replace(/^\/(.:)/, '$1');
+      return new URL(uri).pathname.replace(/^\/([A-Za-z]:)/, '$1');
     } catch {
       return uri.replace('file://', '');
     }

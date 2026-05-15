@@ -51,7 +51,7 @@ try {
       // Start async disk load without blocking init response. Pass the
       // language-server connection so the indexer can notify the client
       // about progress (start/progress/done).
-      docManager.loadFromDisk(root, connection).catch((e) => {
+      docManager.loadFromDisk(root, connection, workerPool).catch((e) => {
         logger.error('loadFromDisk.error', { error: e && (e.stack || e.message) });
       });
     } catch (e) { /* ignore */ }
@@ -201,8 +201,7 @@ try {
       if (!word) return null;
       const def = docManager.findDefinition(word);
       if (!def) return null;
-      const { pathToFileURL } = require('url');
-      const fileUri = pathToFileURL(require('path').resolve(def.file)).toString();
+      const fileUri = pathToFileURL(pathMod.resolve(def.file)).toString();
       const nameLen = (def.name || word).length;
       return { uri: fileUri, range: { start: { line: def.line, character: 0 }, end: { line: def.line, character: nameLen } } };
     } catch (err) {
@@ -237,7 +236,7 @@ try {
       if (def.file) { candidateFilePaths.add(pathMod.resolve(def.file)); candidateFilePaths.add(pathMod.resolve(pathMod.dirname(def.file))); }
       const editsByUri = {};
       const escapedName = oldName.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-      function isInQuotedString(lineText, matchIndex) { const before = lineText.substring(0, matchIndex); const dq = (before.match(/\"/g) || []).length; const sq = (before.match(/\'/g) || []).length; return ((dq % 2) === 1) || ((sq % 2) === 1); }
+      function isInQuotedString(lineText, matchIndex) { const before = lineText.substring(0, matchIndex); let dq = 0; for (let i = 0; i < before.length; i++) { if (before[i] === '"') { if (i + 1 < before.length && before[i + 1] === '"') { i++; } else { dq++; } } } const sq = (before.match(/'/g) || []).length; return (dq % 2 === 1) || (sq % 2 === 1); }
       function isCommentLine(lineText, matchIndex) { const idxA = lineText.indexOf("'"); const idxB = lineText.indexOf('//'); const commentIdx = (idxA === -1) ? idxB : (idxB === -1 ? idxA : Math.min(idxA, idxB)); return commentIdx !== -1 && commentIdx < matchIndex; }
       function preserveCase(matched, replacement) { if (matched.toUpperCase() === matched) return replacement.toUpperCase(); if (matched.toLowerCase() === matched) return replacement.toLowerCase(); if (/^[A-Z][a-z]/.test(matched)) return replacement.charAt(0).toUpperCase() + replacement.slice(1); return replacement; }
 
@@ -295,7 +294,7 @@ try {
           let subEnd = lines.length - 1; for (let i = selEnd; i < lines.length; i++) { const l = lines[i] || ''; if (/^\s*End\s+Sub\b/i.test(l)) { subEnd = i; break; } }
           const declaredOutsideSelection = new Set(); for (let i = subStart; i <= subEnd; i++) { if (i >= selStart && i <= selEnd) continue; const l = lines[i] || ''; const dm = /\bDim\s+([A-Za-z_][A-Za-z0-9_]*)/i.exec(l); if (dm) declaredOutsideSelection.add(dm[1]); const asgn = /\b([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(l); if (asgn) declaredOutsideSelection.add(asgn[1]); const sig = /^\s*Sub\s+[A-Za-z_][A-Za-z0-9_]*\s*\(([^)]*)\)/i.exec(l); if (sig && sig[1]) { const parts = sig[1].split(',').map(p => p.trim()).filter(Boolean); for (const p of parts) { const pn = p.split(' ')[0]; if (pn) declaredOutsideSelection.add(pn); } } }
           const globalDeclared = new Set(); for (let i = 0; i < lines.length; i++) { const l = lines[i] || ''; if (/^\s*Sub\s+Class_/i.test(l) || /^\s*Sub\s+Process_Globals/i.test(l)) { for (let j = i + 1; j < lines.length; j++) { const lj = lines[j] || ''; const dm = /\bDim\s+([A-Za-z_][A-Za-z0-9_]*)/i.exec(lj); if (dm) globalDeclared.add(dm[1]); if (/^\s*End\s+Sub\b/i.test(lj)) { break; } } } }
-          const candidateParams = [...ids].filter((id) => !declaredInSelection.has(id) && !/^Sub$|^End$|^Type$|^End Type$|^End Sub$/i.test(id));
+          const candidateParams = [...ids].filter((id) => !declaredInSelection.has(id) && !/^Sub$|^End$|^Type$|^End Sub$/i.test(id));
           const candidatesFiltered = candidateParams.filter((id) => {
             if (declaredOutsideSelection.has(id)) return true; if (globalDeclared.has(id)) return true; const before = lines.slice(subStart, selStart).join('\n'); const after = lines.slice(selEnd + 1, subEnd + 1).join('\n'); const regex = new RegExp('\\b' + id.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'i'); if (regex.test(before) || regex.test(after)) return true; return false;
           });
@@ -342,10 +341,13 @@ try {
 
   documents.listen(connection);
   let shutdownRequested = false;
-  connection.onShutdown(() => {
+  connection.onShutdown(async () => {
     shutdownRequested = true;
     logger.info('shutdown', {});
-    try { workerPool.dispose(); } catch (_) { /* ignore */ }
+    try {
+      await docManager.saveSnapshot(workspaceRoot);
+      workerPool.dispose();
+    } catch (_) { /* ignore */ }
     return Promise.resolve();
   });
   connection.onExit(() => {
@@ -353,9 +355,8 @@ try {
     process.exit(0);
   });
   connection.listen();
-  console.log('LSP server started (stdio)');
+  // LSP server started - silent for production
 } catch (err) {
-  console.error('Failed to start LSP server. Missing dependency `vscode-languageserver`?');
-  console.error(err && err.stack ? err.stack : err);
+  // Failed to start LSP server - silently exit
   process.exit(1);
 }

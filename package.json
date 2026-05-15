@@ -1,8 +1,8 @@
 {
   "name": "b4x-intellisense",
-  "displayName": "VS Code B4X IDE Companion",
-  "description": "Comprehensive IDE companion for the B4X family (B4A, B4i, B4J, B4R). Provides a complete developer toolkit for Visual Studio Code including a local LSP backend and fast workspace indexer with optional prebuilt API index. Delivers advanced language features (contextual completions, hover, go-to-definition, rename, signature help), cross-file type inference, persistent on-disk indexing with safe atomic writes and migrations, XML and library discovery, project-aware configuration via .b4a/.b4i/.b4j/.b4r files, and server-side refactor actions (Extract Method with preview). Includes diagnostics, code actions, platform INI/theme import, VS Code commands for project management, and an offline-first design that gracefully falls back to live workspace and installed libraries when a bundled API index is not present.",
-  "version": "0.1.271",
+  "displayName": "B4X Code IDE Companion",
+  "description": "B4X IDE companion for B4A, B4i, B4J, and B4R development in Visual Studio Code. IntelliSense, type inference, go-to-definition, diagnostics, code formatting, library management, and AI integration — all fully offline.",
+  "version": "0.1.345",
   "publisher": "AneleMbangaMashy",
   "engines": {
     "vscode": "^1.95.0"
@@ -22,7 +22,7 @@
     "basic4ios",
     "basic4arduino"
   ],
-  "main": "./dist/src/extension.js",
+  "main": "./dist/extension.js",
   "icon": "images/b4xlogo.png",
   "repository": {
     "type": "git",
@@ -33,6 +33,11 @@
       {
         "command": "b4xIntellisense.openB4xProject",
         "title": "Open B4X Project...",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.newB4xProjectFromTemplate",
+        "title": "New B4X Project from Template...",
         "category": "B4X Companion"
       },
       {
@@ -146,13 +151,28 @@
         "category": "B4X Companion"
       },
       {
-        "command": "b4xIntellisense.openB4X",
+        "command": "b4xIntellisense.openB4x",
         "title": "Open B4X Website",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.openPlatform",
+        "title": "Open in B4X IDE",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.installProject",
         "title": "Build & Install Project (B4A / B4J)",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.packageLibraries",
+        "title": "Package Additional Libraries",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.startEmulator",
+        "title": "Start Android Emulator",
         "category": "B4X Companion"
       },
       {
@@ -191,6 +211,41 @@
         "category": "B4X Companion"
       },
       {
+        "command": "b4xIntellisense.reloadProject",
+        "title": "Reload B4X Project",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.debugState",
+        "title": "Debug Extension State",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.printStores",
+        "title": "Print Store Counts",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.dumpDiagnostics",
+        "title": "Dump Diagnostics to File",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.openDiagnostics",
+        "title": "Open Diagnostics File",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.showStatusSummary",
+        "title": "Show Status Summary",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.refreshCommandsView",
+        "title": "Refresh Commands View",
+        "category": "B4X Companion"
+      },
+      {
         "command": "b4xIntellisense.setB4aInstallPath",
         "title": "Set Platform Install Path",
         "category": "B4X Companion"
@@ -203,6 +258,46 @@
       {
         "command": "b4xIntellisense.insertEventHandler",
         "title": "Insert Event Handler",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.focusDashboard",
+        "title": "Project Resources",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.ollamaLaunch",
+        "title": "Ollama Launch VSCode Model",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.ollamaLaunchClaude",
+        "title": "Ollama Launch Claude Model",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.deepseekLaunch",
+        "title": "DeepSeek TUI Launch",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.browseLibraries",
+        "title": "B4X Library Browser",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.openBjlEditor",
+        "title": "Open Layout Editor",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.openLibraryDetail",
+        "title": "Open Library Detail",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.refreshLibraryCatalog",
+        "title": "Refresh Library Catalog",
         "category": "B4X Companion"
       }
     ],
@@ -225,6 +320,24 @@
           ".b4r"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "b4x-bjl-editor",
+        "displayName": "B4X Layout Editor",
+        "priority": "default",
+        "selector": [
+          {
+            "filenamePattern": "*.bjl"
+          },
+          {
+            "filenamePattern": "*.bil"
+          },
+          {
+            "filenamePattern": "*.bal"
+          }
+        ]
       }
     ],
     "grammars": [
@@ -338,6 +451,10 @@
           "group": "1_open@10"
         },
         {
+          "command": "b4xIntellisense.openPlatform",
+          "group": "1_open@15"
+        },
+        {
           "command": "b4xIntellisense.installProject",
           "when": "b4x.hasBuildableProject",
           "group": "1_open@20"
@@ -366,6 +483,11 @@
           "group": "navigation@20"
         },
         {
+          "command": "b4xIntellisense.openPlatform",
+          "when": "resourceExtname =~ /\\.(b4a|b4i|b4j|b4r)/ && explorerResourceIsFolder == false",
+          "group": "navigation@25"
+        },
+        {
           "command": "b4xIntellisense.installProject",
           "when": "b4x.hasBuildableProject && resourceExtname =~ /\\.(b4a|b4j)/ && explorerResourceIsFolder == false",
           "group": "navigation@30"
@@ -376,14 +498,42 @@
           "command": "b4xIntellisense.openB4xProject"
         },
         {
+          "command": "b4xIntellisense.newB4xProjectFromTemplate"
+        },
+        {
+          "command": "b4xIntellisense.startEmulator"
+        },
+        {
+          "command": "b4xIntellisense.openB4x"
+        },
+        {
+          "command": "b4xIntellisense.importThemeFromInstall"
+        },
+        {
+          "command": "b4xIntellisense.captureGif"
+        },
+        {
+          "command": "b4xIntellisense.captureScreenshots"
+        },
+        {
+          "command": "b4xIntellisense.reloadProject"
+        },
+        {
+          "command": "b4xIntellisense.focusDashboard"
+        },
+        {
           "command": "b4xIntellisense.installProject",
           "when": "b4x.hasBuildableProject"
+        },
+        {
+          "command": "b4xIntellisense.packageLibraries"
         },
         {
           "command": "b4xIntellisense.openDocs"
         },
         {
-          "command": "b4xIntellisense.runDiagnostics"
+          "command": "b4xIntellisense.runDiagnostics",
+          "when": "false"
         },
         {
           "command": "b4xIntellisense.openSettings"
@@ -482,7 +632,7 @@
         },
         {
           "command": "b4xIntellisense.backupWorkspace",
-          "when": "b4x.hasBuildableProject"
+          "when": "false"
         },
         {
           "command": "b4xIntellisense.setB4aInstallPath",
@@ -491,9 +641,37 @@
         {
           "command": "b4xIntellisense.showLibraryDbPath",
           "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.ollamaLaunch"
+        },
+        {
+          "command": "b4xIntellisense.ollamaLaunchClaude"
+        },
+        {
+          "command": "b4xIntellisense.deepseekLaunch"
+        },
+        {
+          "command": "b4xIntellisense.browseLibraries"
+        },
+        {
+          "command": "b4xIntellisense.refreshLibraryCatalog"
+        },
+        {
+          "command": "b4xIntellisense.openBjlEditor"
+        },
+        {
+          "command": "b4xIntellisense.openLibraryDetail",
+          "when": "false"
         }
       ]
     },
+    "languageModelChatProviders": [
+      {
+        "vendor": "ollama",
+        "displayName": "Ollama"
+      }
+    ],
     "keybindings": [
       {
         "command": "b4xIntellisense.openDocs",
@@ -539,10 +717,35 @@
           "default": "C:\\Program Files\\Anywhere Software\\B4J",
           "description": "Optional installation folder of B4J to locate Themes and other assets."
         },
+        "b4xIntellisense.b4jJavaPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to the java.exe executable to use for running B4J applications. If empty, it will try to detect it from B4J settings or use the system default."
+        },
         "b4xIntellisense.b4rInstallPath": {
           "type": "string",
           "default": "C:\\Program Files\\Anywhere Software\\B4R",
           "description": "Optional installation folder of B4R to locate Themes and other assets."
+        },
+        "b4xIntellisense.b4aWorkspaceFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Default workspace folder for B4A projects. Used when creating new projects from templates."
+        },
+        "b4xIntellisense.b4iWorkspaceFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Default workspace folder for B4i projects. Used when creating new projects from templates."
+        },
+        "b4xIntellisense.b4jWorkspaceFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Default workspace folder for B4J projects. Used when creating new projects from templates."
+        },
+        "b4xIntellisense.b4rWorkspaceFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Default workspace folder for B4R projects. Used when creating new projects from templates."
         },
         "b4xIntellisense.fontFamily": {
           "type": "string",
@@ -579,15 +782,25 @@
           "default": true,
           "description": "When true the extension will add the project folder as a workspace folder when opening a B4X project. Useful when running Extension Host for testing."
         },
+        "b4xIntellisense.autoRestoreWorkspace": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true the extension will automatically attempt to restore the last active B4X project file into the VS Code Explorer if launched inside an empty window."
+        },
         "b4xIntellisense.autoOpenProjectFolderOnOpen": {
           "type": "boolean",
           "default": false,
-          "description": "When true the extension will open the project folder in the window (replacing the current workspace) when opening a B4X project. Only enable if you want to switch the window to the project folder automatically."
+          "description": "When true the extension will open the project folder in the window (replacing the current workspace) when opening a B4X project. Only disable if you want to keep the current workspace when opening a B4X project."
         },
         "b4xIntellisense.autoLoadProjectAssets": {
           "type": "boolean",
           "default": true,
           "description": "When true the extension will automatically load project assets (libraries, modules, start language server) after a B4X project is opened."
+        },
+        "b4xIntellisense.projectsViewName": {
+          "type": "string",
+          "default": "Projects",
+          "description": "Label used for the Projects view root in the B4X Activity view. Change this to rename the root node shown inside the view."
         },
         "b4xIntellisense.disableConsoleOutput": {
           "type": "boolean",
@@ -624,12 +837,57 @@
           "default": "",
           "description": "Path to the adb executable. Leave empty to auto-detect from the Android SDK (via platform INI) or prompt on first use."
         },
+        "b4xIntellisense.emulatorPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Android emulator executable. Leave empty to use the default Android SDK emulator path."
+        },
         "b4xIntellisense.ffmpegPath": {
           "type": "string",
           "default": "",
           "description": "Path to the ffmpeg executable used for GIF capture. Leave empty to auto-detect from common install locations or prompt on first use."
+        },
+        "b4xIntellisense.googleSheetUrl": {
+          "type": "string",
+          "default": "https://docs.google.com/spreadsheets/d/1qFvc3Q70RriJS3m_ywBoJvZ47gSTVAuN_X04SI0_XBw/edit?gid=0",
+          "description": "Google Sheets URL for fetching library data. Leave empty to disable Google Sheet integration."
         }
       }
+    },
+    "viewsContainers": {
+      "secondarySidebar": [
+        {
+          "id": "b4x-companion-dashboard-container",
+          "title": "B4X Companion",
+          "icon": "images/b4xlogo.png"
+        }
+      ],
+      "activitybar": [
+        {
+          "id": "b4xIntellisense-activity",
+          "title": "B4X Companion",
+          "icon": "images/24x24.png"
+        }
+      ]
+    },
+    "views": {
+      "b4x-companion-dashboard-container": [
+        {
+          "id": "b4x-companion-dashboard",
+          "name": "Project Resources",
+          "type": "webview"
+        }
+      ],
+      "b4xIntellisense-activity": [
+        {
+          "id": "b4xProjects",
+          "name": "Projects"
+        },
+        {
+          "id": "b4xLibraries",
+          "name": "Libraries"
+        }
+      ]
     }
   },
   "activationEvents": [
@@ -641,36 +899,58 @@
     "onCommand:b4xIntellisense.printStores",
     "onCommand:b4xIntellisense.dumpDiagnostics",
     "onCommand:b4xIntellisense.installProject",
+    "onCommand:b4xIntellisense.startEmulator",
     "onCommand:b4xIntellisense.openSettings",
     "onCommand:b4xIntellisense.importThemeFromInstall",
     "onCommand:b4xIntellisense.captureGif",
     "onCommand:b4xIntellisense.captureScreenshots",
-    "onCommand:b4xIntellisense.openB4X",
-    "onCommand:b4xIntellisense.runDiagnostics"
+    "onCommand:b4xIntellisense.openB4x",
+    "onCommand:b4xIntellisense.openPlatform",
+    "onCommand:b4xIntellisense.runDiagnostics",
+    "onCommand:b4xIntellisense.focusDashboard",
+    "onCommand:b4xIntellisense.ollamaLaunch",
+    "onCommand:b4xIntellisense.ollamaLaunchClaude",
+    "onCommand:b4xIntellisense.deepseekLaunch",
+    "onCommand:b4xIntellisense.browseLibraries",
+    "onCommand:b4xIntellisense.openBjlEditor",
+    "onView:b4xProjects",
+    "onView:b4xLibraries",
+    "onCustomEditor:b4x-bjl-editor"
   ],
   "scripts": {
-    "compile": "tsc -p .",
+    "compile": "node -e \"require('./scripts/bundle.js').restoreDevMain()\" && tsc -p .",
+    "bundle": "node ./scripts/bundle.js",
     "prebuild": "node ./scripts/bump-version.js",
-    "build": "npm run compile",
+    "build": "npm run compile && npm run bundle",
     "watch": "tsc -w -p .",
-    "test": "tsc -p tsconfig.tests.json && node ./dist/scripts/tests/test-type-diagnostics.js",
+    "test": "node ./test/runTests.js",
+    "test:unit": "node ./test/unit/indexer.test.js",
+    "test:integration": "npm run compile && node ./test/runTests.js",
     "test:storage": "tsc -p tsconfig.tests.json && node ./dist/scripts/tests/test-library-index.js",
     "start-lsp": "node server/server.js",
     "inspect-index": "echo 'inspect-index requires server/indexer/inspect-index.js — not yet migrated'",
     "inspect-index:repair": "echo 'inspect-index:repair requires server/indexer/inspect-index.js — not yet migrated'",
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run build",
     "rebuild:electron": "node ./scripts/rebuild-electron.js",
     "package:vsix": "npm run build && npm run rebuild:electron && npx vsce package"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.12.0",
+    "@types/adm-zip": "^0.5.8",
+    "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.1",
     "@types/node": "^20.17.30",
     "@types/vscode": "^1.95.0",
+    "@vscode/test-electron": "^2.5.0",
     "docx": "^9.6.1",
     "electron-rebuild": "^3.2.9",
+    "esbuild": "^0.28.0",
+    "glob": "^10.2.7",
+    "mocha": "^10.2.0",
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "adm-zip": "^0.5.17",
     "node-stream-zip": "^1.15.0",
     "sql.js": "^1.8.0",
     "vscode-languageclient": "^9.0.1",

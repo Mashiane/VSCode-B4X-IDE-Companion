@@ -33,7 +33,21 @@ function parseFile(text, filePath) {
 
     m = dimRegex.exec(line);
     if (m) {
-      symbols.push({ kind: 'variable', name: m[1], line: i, file: filePath });
+      // Handle multi-variable Dim declarations: Dim a, b, c As String
+      const rest = line.substring(m.index + m[0].length);
+      const vars = [m[1]];
+      if (rest.includes(',')) {
+        const parts = rest.split(',');
+        for (let pi = 0; pi < parts.length - 1; pi++) {
+          const vname = parts[pi].trim().split(/\s+/)[0];
+          if (vname && /^[A-Za-z_][A-Za-z0-9_]*$/.test(vname)) {
+            vars.push(vname);
+          }
+        }
+      }
+      for (const v of vars) {
+        symbols.push({ kind: 'variable', name: v, line: i, file: filePath });
+      }
       continue;
     }
   }

@@ -12,6 +12,12 @@ function createExtractMethodEdit(filePath, selection, newName, fileContent, para
   const start = selection.start || { line: 0, character: 0 };
   const end = selection.end || { line: 0, character: 0 };
 
+  // Clamp selection bounds to valid line range
+  const safeStartLine = Math.max(0, Math.min(start.line, lines.length - 1));
+  const safeEndLine = Math.max(safeStartLine, Math.min(end.line, lines.length - 1));
+  start.line = safeStartLine;
+  end.line = safeEndLine;
+
   // Extract text
   const extractedLines = lines.slice(start.line, end.line + 1);
   // If single line, trim start/end chars

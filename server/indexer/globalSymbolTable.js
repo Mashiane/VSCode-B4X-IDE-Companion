@@ -49,13 +49,13 @@ class GlobalSymbolTable {
     const newIds = new Set();
     for (const sym of fileSymbols) {
       const id = ++this._symbolId;
-      sym._id = id;
-      this._symbolStore.set(id, sym);
+      const symWithId = { ...sym, _id: id };
+      this._symbolStore.set(id, symWithId);
       newIds.add(id);
 
       const key = sym.name.toLowerCase();
       if (!this.byName.has(key)) this.byName.set(key, []);
-      this.byName.get(key).push(sym);
+      this.byName.get(key).push(symWithId);
       this._insertIntoTrie(key, id);
     }
     this._fileToIds.set(filePath, newIds);
@@ -134,6 +134,43 @@ class GlobalSymbolTable {
     for (const child of node.children.values()) {
       if (results.length >= limit) return;
       this._collectSymbols(child, results, limit);
+    }
+  }
+
+  serialize() {
+    return JSON.stringify({
+      symbolStore: Array.from(this._symbolStore.entries()),
+      fileToIds: Array.from(this._fileToIds.entries()).map(([file, ids]) => [file, Array.from(ids)]),
+      lastId: this._symbolId
+    });
+  }
+
+  deserialize(json) {
+    try {
+      const data = JSON.parse(json);
+      this._symbolStore = new Map(data.symbolStore);
+      this._fileToIds = new Map(data.fileToIds.map(([file, ids]) => [file, new Set(ids)]));
+      this._symbolId = data.lastId;
+
+      // Rebuild byName and Trie, validating symbols
+      this.byName = new Map();
+      this._trie = new TrieNode();
+
+      for (const [id, sym] of this._symbolStore.entries()) {
+        if (!sym || typeof sym.name !== 'string' || typeof sym.kind !== 'string' ||
+            typeof sym.file !== 'string' || typeof sym.line !== 'number') {
+          this._symbolStore.delete(id);
+          continue;
+        }
+        const key = sym.name.toLowerCase();
+        if (!this.byName.has(key)) this.byName.set(key, []);
+        this.byName.get(key).push(sym);
+        if (typeof sym._id === 'number') {
+          this._insertIntoTrie(key, sym._id);
+        }
+      }
+    } catch (e) {
+      // Failed to deserialize GlobalSymbolTable - silently continue
     }
   }
 }
