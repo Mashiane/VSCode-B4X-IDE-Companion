@@ -2,10 +2,20 @@
   "name": "b4x-intellisense",
   "displayName": "B4X Code IDE Companion",
   "description": "B4X IDE companion for B4A, B4i, B4J, and B4R development in Visual Studio Code. IntelliSense, type inference, go-to-definition, diagnostics, code formatting, library management, and AI integration — all fully offline.",
-  "version": "0.1.345",
+  "version": "0.1.419",
   "publisher": "AneleMbangaMashy",
   "engines": {
     "vscode": "^1.95.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Requires trust to access B4X project files and run the language server. Basic features work without trust."
+    },
+    "virtualWorkspaces": false
   },
   "categories": [
     "Programming Languages"
@@ -32,12 +42,12 @@
     "commands": [
       {
         "command": "b4xIntellisense.openB4xProject",
-        "title": "Open B4X Project...",
+        "title": "Open B4X Project",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.newB4xProjectFromTemplate",
-        "title": "New B4X Project from Template...",
+        "title": "New B4X Project from Template",
         "category": "B4X Companion"
       },
       {
@@ -137,7 +147,7 @@
       },
       {
         "command": "b4xIntellisense.importThemeFromInstall",
-        "title": "Import Theme From B4X Install",
+        "title": "Import B4X Theme",
         "category": "B4X Companion"
       },
       {
@@ -287,7 +297,7 @@
       },
       {
         "command": "b4xIntellisense.openBjlEditor",
-        "title": "Open Layout Editor",
+        "title": "Layout Designer",
         "category": "B4X Companion"
       },
       {
@@ -298,6 +308,16 @@
       {
         "command": "b4xIntellisense.refreshLibraryCatalog",
         "title": "Refresh Library Catalog",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.showProjectStatistics",
+        "title": "Project Statistics",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.checkHealth",
+        "title": "IntelliSense Health",
         "category": "B4X Companion"
       }
     ],
@@ -537,6 +557,12 @@
         },
         {
           "command": "b4xIntellisense.openSettings"
+        },
+        {
+          "command": "b4xIntellisense.showProjectStatistics"
+        },
+        {
+          "command": "b4xIntellisense.checkHealth"
         },
         {
           "command": "b4xIntellisense.gotoDefinition",
@@ -832,6 +858,16 @@
           "default": false,
           "description": "When true, the extension appends a timestamped log file (b4x-log-YYYYMMDD-HHMMSS.txt) containing debug entries for extension actions."
         },
+        "b4xIntellisense.enableUnusedSubDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect Unused Subroutines"
+        },
+        "b4xIntellisense.enableUnusedLibraryDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect Unused Libraries"
+        },
         "b4xIntellisense.adbPath": {
           "type": "string",
           "default": "",
@@ -915,7 +951,9 @@
     "onCommand:b4xIntellisense.openBjlEditor",
     "onView:b4xProjects",
     "onView:b4xLibraries",
-    "onCustomEditor:b4x-bjl-editor"
+    "onCustomEditor:b4x-bjl-editor",
+    "onCommand:b4xIntellisense.showProjectStatistics",
+    "onCommand:b4xIntellisense.checkHealth"
   ],
   "scripts": {
     "compile": "node -e \"require('./scripts/bundle.js').restoreDevMain()\" && tsc -p .",
@@ -931,8 +969,8 @@
     "inspect-index": "echo 'inspect-index requires server/indexer/inspect-index.js — not yet migrated'",
     "inspect-index:repair": "echo 'inspect-index:repair requires server/indexer/inspect-index.js — not yet migrated'",
     "vscode:prepublish": "npm run build",
-    "rebuild:electron": "node ./scripts/rebuild-electron.js",
-    "package:vsix": "npm run build && npm run rebuild:electron && npx vsce package"
+    "verify:vsix": "node scripts/verify-vsix.js",
+    "package:vsix": "npm run build && npx vsce package && npm run verify:vsix"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.12.0",
@@ -942,6 +980,7 @@
     "@types/node": "^20.17.30",
     "@types/vscode": "^1.95.0",
     "@vscode/test-electron": "^2.5.0",
+    "chart.js": "^4.5.1",
     "docx": "^9.6.1",
     "electron-rebuild": "^3.2.9",
     "esbuild": "^0.28.0",
@@ -956,8 +995,5 @@
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12"
-  },
-  "optionalDependencies": {
-    "better-sqlite3": "^8.3.0"
   }
 }

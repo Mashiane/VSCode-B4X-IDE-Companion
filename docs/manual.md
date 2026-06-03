@@ -15,16 +15,17 @@
 6. [Syntax & Editing](#syntax--editing)
 7. [Diagnostics & Code Actions](#diagnostics--code-actions)
 8. [Extract Method](#extract-method)
-9. [Build & Install](#build--install)
-10. [Theme Import](#theme-import)
-11. [Device Capture](#device-capture)
-12. [Snippets](#snippets)
-13. [Context Menu](#context-menu)
-14. [Commands Reference](#commands-reference)
-15. [Settings Reference](#settings-reference)
-16. [Platform Discovery](#platform-discovery)
-17. [Troubleshooting](#troubleshooting)
-18. [Keyboard Shortcuts](#keyboard-shortcuts)
+9. [Project Statistics](#project-statistics)
+10. [Build & Install](#build--install)
+11. [Theme Import](#theme-import)
+12. [Device Capture](#device-capture)
+13. [Snippets](#snippets)
+14. [Context Menu](#context-menu)
+15. [Commands Reference](#commands-reference)
+16. [Settings Reference](#settings-reference)
+17. [Platform Discovery](#platform-discovery)
+18. [Troubleshooting](#troubleshooting)
+19. [Keyboard Shortcuts](#keyboard-shortcuts)
 
 ---
 
@@ -337,6 +338,27 @@ The extension warns when `CallSub`, `CallSubDelayed`, or `CallSub3` references a
 
 This catches runtime crashes at edit time. The diagnostic checks all Subs loaded in your workspace classes and XML libraries.
 
+### Unused Sub Diagnostics
+
+The extension detects Subroutines that are never called anywhere in the project:
+
+- **Private Subs** flagged when not called within their own module (severity: Hint)
+- **Public Subs** flagged when not called from any module in the workspace (severity: Warning)
+- **Exclusions:** B4X lifecycle Subs (`Activity_Create`, `B4XPage_Created`, etc.) and event handlers (`ObjectName_EventName` pattern) are never flagged
+- **CallSub references** are respected — Subs called via `CallSub`/`CallSubDelayed` are not flagged as unused
+
+Toggle this diagnostic via the `b4xIntellisense.enableUnusedSubDiagnostics` setting (default: enabled).
+
+### Unused Library Diagnostics
+
+The extension detects libraries declared in the project file (`.b4a`, `.b4i`, `.b4j`, `.b4r`) whose types are never referenced in any workspace `.bas`/`.b4x` file:
+
+- Cross-references `<Libraries>` entries against actual type usage in workspace code
+- Flags libraries whose exported types are never used anywhere in the project (severity: Information)
+- Core libraries that provide implicit types are excluded
+
+Toggle this diagnostic via the `b4xIntellisense.enableUnusedLibraryDiagnostics` setting (default: enabled).
+
 ### Code Lens — Reference Counts
 
 Above each `Sub` declaration, an inline code lens shows the number of references:
@@ -368,6 +390,62 @@ The `extractMethod.previewBehavior` setting controls whether a preview is shown:
 | `prompt` | Shows a preview and asks before applying |
 | `autoApply` | Applies the extraction without prompting |
 | `alwaysPreview` | Always shows the preview but does not auto-apply |
+
+---
+
+## Project Statistics
+
+The **Project Statistics** dashboard provides an interactive overview of your B4X project, inspired by the jMashProjectProfile tool. Open it via **`Ctrl+Shift+P`** → **Project Statistics** or from the tree view.
+
+### Stat Cards
+
+The top of the dashboard shows key metrics in a 3-column grid:
+
+| Card | Description |
+|---|---|
+| **Total Lines** | Sum of all lines across all modules |
+| **Code Lines** | Lines containing code (excluding comments and blanks) |
+| **Comment Lines** | Lines starting with `'` |
+| **Blank Lines** | Empty or whitespace-only lines |
+| **Modules** | Number of `.bas` / `.b4a` / `.b4i` / `.b4j` / `.b4r` files |
+| **Subs** | Total Sub declarations across all modules |
+| **Events** | Subs following the `ObjectName_EventName` pattern |
+| **Types** | `Type` declarations |
+
+All numbers use locale-aware thousand separators.
+
+### Per-Module Table
+
+A sortable table showing every module with columns:
+
+| Column | Description |
+|---|---|
+| **Module** | File name (with platform extension for cross-platform modules) |
+| **Lines** | Total line count |
+| **Code** | Code lines |
+| **Comment** | Comment lines |
+| **Blank** | Blank lines |
+| **Subs** | Sub declarations |
+| **Events** | Event handler Subs |
+| **Types** | Type declarations |
+
+A **Totals** row in `tfoot` sums all numeric columns.
+
+### Charts
+
+Three interactive Chart.js charts provide visual analysis:
+
+| Chart | Type | Description |
+|---|---|---|
+| **Line Composition** | Doughnut | Proportional breakdown of Code vs. Comment vs. Blank lines |
+| **Subroutines per Module (Top 10)** | Horizontal stacked bar | Sub and Event Handler counts for the 10 modules with the most Subs |
+| **Module Size Breakdown (Top 10)** | Horizontal stacked bar | Code, Comment, and Blank line composition for the 10 largest modules by total lines |
+
+Charts use VS Code's theme-aware `--vscode-charts-*` CSS variables for seamless light/dark mode integration.
+
+### Empty Project Handling
+
+If no modules are loaded, the dashboard shows a "No modules found" message and hides the charts.
 
 ---
 
@@ -621,10 +699,15 @@ Open the Command Palette with **`Ctrl+Shift+P`** and type `B4X` to see all avail
 | **Import Theme From B4A Install** | — | Pick and apply a `.vssettings` theme from B4A Themes folder |
 | **Open Extension Settings** | — | Open VS Code Settings filtered to B4X Companion |
 | **Open Documentation** | `Ctrl+Shift+H` | Open this User Manual or the README |
+| **Project Statistics** | — | Open interactive dashboard with project metrics and Chart.js charts |
+| **IntelliSense Health** | — | Check IntelliSense health status |
 | **Open B4X Website** | — | Open b4x.com in an embedded webview |
 | **Capture GIF from Device** | — | Record a GIF from a connected Android device |
 | **Capture Screenshots (Scroll)** | — | Capture screenshot sequence from a connected device |
 | **Run All Diagnostics** | — | Dump extension state, loaded libraries, and diagnostics to JSON |
+| **Backup Workspace** | — | Create a backup of the current workspace |
+| **Extract Method** | — | Extract selected code into a new Sub with inferred parameters |
+| **Insert Event Handler** | — | Generate event handler Sub templates |
 
 ---
 
@@ -675,6 +758,8 @@ All settings are prefixed with **`b4xIntellisense.`** in VS Code Settings.
 | `disableConsoleOutput` | `true` | Suppress console output; diagnostics go to the log file. |
 | `debug` | `false` | Append a timestamped debug log file for extension actions. |
 | `enableTelemetry` | `false` | Opt-in anonymous telemetry for basic feature usage. |
+| `enableUnusedSubDiagnostics` | `true` | Detect unused Private Subs (Hint) and Public Subs (Warning). |
+| `enableUnusedLibraryDiagnostics` | `true` | Detect unused declared libraries (Information severity). |
 
 ---
 
@@ -703,13 +788,6 @@ From each INI file the extension reads:
 | `AutoBackup` | Enables periodic workspace backups |
 
 If your installation is non-standard, override any path in **Settings → B4X Companion**.
-
----
-
-## Troubleshooting
-
-### Technical Specifications
-The extension uses a bundled Node.js runtime with a high-performance trie-based symbol index. The core intelligence engine is verified via automated unit and integration tests to ensure stability across B4X platforms.
 
 ---
 
