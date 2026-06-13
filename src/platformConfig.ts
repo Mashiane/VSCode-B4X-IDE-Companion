@@ -3,6 +3,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { execSync } from 'child_process';
 import * as vscode from 'vscode';
+import { findWineIniPath, translateWinePathToHost } from './winePaths';
+import { getB4xStringSetting } from './b4xSettings';
 
 const appDataFolder = process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming');
 
@@ -68,8 +70,6 @@ export function findPlatformInstallDirs(): Record<string, string> {
 let regDirsCache: Record<string, string> | undefined;
 
 export function getPlatformSettings(platformFilter?: B4xPlatformName): B4xPlatformSettings {
-  const configuration = vscode.workspace.getConfiguration('b4xIntellisense');
-
   const settingKeys: Record<B4xPlatformName, string> = {
     b4a: 'b4aIniPath',
     b4i: 'b4iIniPath',
@@ -89,12 +89,16 @@ export function getPlatformSettings(platformFilter?: B4xPlatformName): B4xPlatfo
   const platformsToCheck = platformFilter ? [platformFilter] : (['b4a', 'b4i', 'b4j', 'b4r'] as B4xPlatformName[]);
 
   for (const platform of platformsToCheck) {
-    let iniPath = (configuration.get<string>(settingKeys[platform], '') ?? '').trim();
+    let iniPath = getB4xStringSetting(settingKeys[platform], '').trim();
+    if (iniPath) {
+      iniPath = translateWinePathToHost(iniPath) ?? iniPath;
+    }
 
     // Auto-discover if the user hasn't configured an explicit path (or the configured path doesn't exist)
     if (!iniPath || !fs.existsSync(iniPath)) {
-      // 1. Try %APPDATA%\Anywhere Software\<PlatformDir>\b4xV5.ini
       const dirs = platformAppDataDirs[platform] ?? [];
+
+      // 1. Native Windows APPDATA discovery
       for (const dir of dirs) {
         const candidate = path.join(appDataFolder, 'Anywhere Software', dir, 'b4xV5.ini');
         if (fs.existsSync(candidate)) {
@@ -103,8 +107,16 @@ export function getPlatformSettings(platformFilter?: B4xPlatformName): B4xPlatfo
         }
       }
 
-      // 2. Try registry-based install directory
+      // 2. Wine prefix discovery on non-Windows hosts
       if (!iniPath || !fs.existsSync(iniPath)) {
+        const wineCandidate = findWineIniPath(dirs);
+        if (wineCandidate) {
+          iniPath = wineCandidate;
+        }
+      }
+
+      // 3. Try registry-based install directory on native Windows
+      if ((!iniPath || !fs.existsSync(iniPath)) && process.platform === 'win32') {
         const regDir = getRegDirs()[platform];
         if (regDir) {
           const candidate = path.join(regDir, 'b4xV5.ini');

@@ -25,6 +25,13 @@ async function bundle() {
         'better-sqlite3'
       ],
     });
+    try {
+      const wasmSrc = require.resolve('sql.js/dist/sql-wasm.wasm');
+      const wasmDest = path.join(__dirname, '..', 'dist', 'sql-wasm.wasm');
+      fs.copyFileSync(wasmSrc, wasmDest);
+    } catch (copyErr) {
+      console.warn('Could not copy sql-wasm.wasm:', copyErr.message || copyErr);
+    }
     console.log('Bundling complete.');
   } catch (e) {
     console.error('Bundling failed:', e);

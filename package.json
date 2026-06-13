@@ -883,6 +883,21 @@
           "default": "",
           "description": "Path to the ffmpeg executable used for GIF capture. Leave empty to auto-detect from common install locations or prompt on first use."
         },
+        "b4xIntellisense.wine.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Linux/Wine path resolution for B4X installations. When enabled, INI files and library paths stored as Windows paths are translated through the configured Wine prefix."
+        },
+        "b4xIntellisense.wine.prefix": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Wine prefix that contains the B4X installation and b4xV5.ini files. Used on Linux when wine.enabled is true. If empty, ~/.wine or WINEPREFIX is used."
+        },
+        "b4xIntellisense.filterExplorerFiles": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, hide B4X files not referenced by the active project from the VS Code Explorer. Disabled by default to avoid hiding project files when path resolution is incomplete."
+        },
         "b4xIntellisense.googleSheetUrl": {
           "type": "string",
           "default": "https://docs.google.com/spreadsheets/d/1qFvc3Q70RriJS3m_ywBoJvZ47gSTVAuN_X04SI0_XBw/edit?gid=0",

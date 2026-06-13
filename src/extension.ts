@@ -203,6 +203,9 @@ import { B4xInlineCompletionItemProvider } from './b4xInlineCompletionProvider';
 import { B4xRenameProvider } from './b4xRenameProvider';
 import { B4xCodeLensProvider } from './b4xCodeLensProvider';
 import { B4X_PLATFORMS, getBuilderPath, getDefaultInstallPath, getBuildArgs, needsAdb, getArtifactExt, getSupportedPlatforms } from './platformBuilders';
+import { translateWinePathToHost } from './winePaths';
+import { pathKey } from './pathUtils';
+import { getB4xStringSetting } from './b4xSettings';
 
 let pendingSuggestRequest: NodeJS.Timeout | undefined;
 // Disposable handle for the running language client (if started)
@@ -708,8 +711,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (!lastProjectFile) return false;
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) return false;
-    const normProject = lastProjectFile.toLowerCase().replace(/\\/g, '/');
-    return folders.some(f => normProject.startsWith(f.uri.fsPath.toLowerCase().replace(/\\/g, '/') + '/'));
+    const normProject = pathKey(lastProjectFile);
+    return folders.some(f => normProject.startsWith(`${pathKey(f.uri.fsPath)}/`));
   })();
   const hasOpenedProject = isProjectInWorkspace && fs.existsSync(lastProjectFile!);
   // Sync generated Main .b4x edits back to the B4X project file (content after @EndOfDesignText@)
@@ -949,16 +952,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       internalLibrariesFolder = path.join(regPlatformDir, 'Libraries');
     } else {
       const installPathSetting = `${activePlatformName}InstallPath`;
-      const cfgInstall = vscode.workspace.getConfiguration('b4xIntellisense').get<string>(installPathSetting, '') ?? '';
+      const cfgInstallRaw = getB4xStringSetting(installPathSetting, '');
+      const cfgInstall = translateWinePathToHost(cfgInstallRaw) ?? cfgInstallRaw;
       const programFilesBases = [
         cfgInstall.trim(),
-        path.join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Anywhere Software'),
-        path.join(process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)', 'Anywhere Software'),
+        translateWinePathToHost('C:\\Program Files\\Anywhere Software') ?? path.join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Anywhere Software'),
+        translateWinePathToHost('C:\\Program Files (x86)\\Anywhere Software') ?? path.join(process.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)', 'Anywhere Software'),
       ].filter(Boolean);
       const dirs = platformDirCandidates[activePlatformName] ?? [activePlatformName];
       for (const base of programFilesBases) {
-        for (const dirName of dirs) {
-          const candidate = path.join(base, dirName, 'Libraries');
+        const candidates = [
+          path.join(base, 'Libraries'),
+          ...dirs.map((dirName) => path.join(base, dirName, 'Libraries')),
+        ];
+        for (const candidate of candidates) {
           try {
             if (fs.existsSync(candidate)) { internalLibrariesFolder = candidate; break; }
           } catch { /* ignore */ }
@@ -966,7 +973,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (internalLibrariesFolder) break;
       }
       if (!internalLibrariesFolder) {
-        const fallbackBase = path.join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Anywhere Software');
+        const fallbackBase = translateWinePathToHost('C:\\Program Files\\Anywhere Software')
+          ?? path.join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Anywhere Software');
         internalLibrariesFolder = path.join(fallbackBase, dirs[0] ?? activePlatformName, 'Libraries');
       }
     }
@@ -1009,6 +1017,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       activePlatform = loadedPlatforms[0]!;
     }
 
+    if (activePlatform.folders.librariesFolder) {
+      internalLibrariesFolder = activePlatform.folders.librariesFolder;
+    }
+
     // ── Step 4: Parse INI → additional libraries, shared modules, platform folder ──
     const additionalLibrariesFolder = activePlatform.folders.additionalLibrariesFolder;
     const sharedModulesFolder = activePlatform.folders.sharedModulesFolder;
@@ -1030,9 +1042,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     let allowedLibraries = projectConfig.allowedLibraries;
     const allowedModules = projectConfig.allowedModuleBasePaths;
     
-    // Apply Explorer filtering to show ONLY project-referenced files
-    if (projectConfig.allowedModuleFiles && projectConfig.projectFilePath) {
-      void applyExplorerFilter(projectConfig.projectFilePath, projectConfig.allowedModuleFiles);
+    // Explorer filtering is opt-in. Always clear stale per-file exclusions first
+    // so Linux/Wine users can still see and edit project files even when module
+    // resolution is incomplete.
+    if (projectConfig.projectFilePath) {
+      const cfg = vscode.workspace.getConfiguration('b4xIntellisense');
+      const filterExplorerFiles = cfg.get<boolean>('filterExplorerFiles', false);
+      if (filterExplorerFiles && projectConfig.allowedModuleFiles && projectConfig.allowedModuleFiles.length > 0) {
+        void applyExplorerFilter(projectConfig.projectFilePath, projectConfig.allowedModuleFiles);
+      } else {
+        void resetExplorerFilter(projectConfig.projectFilePath);
+      }
     }
     
     console.log(`[B4X DEBUG] reloadPlatformAssets: projectConfig loaded`, {
@@ -1054,7 +1074,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     // ── Scan workspace modules ──
     steps?.step('Scanning workspace modules...');
-    await runWithStatus('Scanning workspace modules', async () => await workspaceClasses.refresh(currentAllowedModuleBasePaths), steps);
+    await runWithStatus(
+      'Scanning workspace modules',
+      async () => await workspaceClasses.refresh(currentAllowedModuleBasePaths, projectConfig.allowedModuleFiles),
+      steps,
+    );
 
     // ── Scan library folders for declared libraries ──
     const searchFolders = [internalLibrariesFolder, ...(additionalLibrariesFolder ? [additionalLibrariesFolder] : [])];
@@ -1069,39 +1093,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         let foundB4xlib = false;
 
         for (const folder of searchFolders) {
-          const xmlCandidates = [
-            path.join(folder, `${lib}.xml`),
-            path.join(folder, lib, `${lib}.xml`),
-          ];
-          for (const c of xmlCandidates) {
-            try {
-              const st = await fs.promises.stat(c).catch(() => undefined);
-              if (st && st.isFile()) {
-                matchedXml.push(c);
-                foundXml = true;
-                break;
-              }
-            } catch { /* ignore */ }
+          const resolved = await resolveLibraryAssetPath(folder, lib, '.xml');
+          if (resolved) {
+            matchedXml.push(resolved);
+            foundXml = true;
+            break;
           }
-          if (foundXml) break;
         }
 
         for (const folder of searchFolders) {
-          const b4Candidates = [
-            path.join(folder, `${lib}.b4xlib`),
-            path.join(folder, lib, `${lib}.b4xlib`),
-          ];
-          for (const c of b4Candidates) {
-            try {
-              const st = await fs.promises.stat(c).catch(() => undefined);
-              if (st && st.isFile()) {
-                matchedB4xlib.push(c);
-                foundB4xlib = true;
-                break;
-              }
-            } catch { /* ignore */ }
+          const resolved = await resolveLibraryAssetPath(folder, lib, '.b4xlib');
+          if (resolved) {
+            matchedB4xlib.push(resolved);
+            foundB4xlib = true;
+            break;
           }
-          if (foundB4xlib) break;
         }
 
         if (!foundXml && !foundB4xlib) {
@@ -3484,10 +3490,54 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 function dedupePaths(filePaths: readonly string[]): string[] {
   const seen = new Map<string, string>();
   for (const p of filePaths) {
-    const key = path.resolve(p).toLowerCase();
+    const key = pathKey(p);
     if (!seen.has(key)) seen.set(key, p);
   }
   return Array.from(seen.values());
+}
+
+async function resolveLibraryAssetPath(folder: string, lib: string, ext: '.xml' | '.b4xlib'): Promise<string | undefined> {
+  const exactCandidates = [
+    path.join(folder, `${lib}${ext}`),
+    path.join(folder, lib, `${lib}${ext}`),
+  ];
+
+  for (const candidate of exactCandidates) {
+    try {
+      const st = await fs.promises.stat(candidate).catch(() => undefined);
+      if (st?.isFile()) return candidate;
+    } catch {
+      // ignore and continue
+    }
+  }
+
+  let entries: fs.Dirent[] = [];
+  try {
+    entries = await fs.promises.readdir(folder, { withFileTypes: true }) as fs.Dirent[];
+  } catch {
+    return undefined;
+  }
+
+  const wantedFile = `${lib}${ext}`.toLowerCase();
+  const directFile = entries.find((entry) => entry.isFile() && entry.name.toLowerCase() === wantedFile);
+  if (directFile) {
+    return path.join(folder, directFile.name);
+  }
+
+  const matchingDir = entries.find((entry) => entry.isDirectory() && entry.name.toLowerCase() === lib.toLowerCase());
+  if (!matchingDir) return undefined;
+
+  try {
+    const subEntries = await fs.promises.readdir(path.join(folder, matchingDir.name), { withFileTypes: true }) as fs.Dirent[];
+    const nestedFile = subEntries.find((entry) => entry.isFile() && entry.name.toLowerCase() === wantedFile);
+    if (nestedFile) {
+      return path.join(folder, matchingDir.name, nestedFile.name);
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
 }
 
 async function promptForB4xProjectFile(): Promise<vscode.Uri | undefined> {
@@ -3526,6 +3576,15 @@ async function configureWorkspaceSettings(workspaceRoot: string, platform?: stri
       existingSettings = JSON.parse(existingContent);
     } catch {
       // Settings file doesn't exist or is invalid, start fresh
+    }
+
+    // Clean out stale per-file B4X exclusions from previous extension runs.
+    if (existingSettings['files.exclude'] && typeof existingSettings['files.exclude'] === 'object') {
+      for (const key of Object.keys(existingSettings['files.exclude'])) {
+        if (/\.(bas|b4a|b4i|b4j|b4r)$/i.test(key)) {
+          delete existingSettings['files.exclude'][key];
+        }
+      }
     }
 
     // Determine which platform folders to exclude
@@ -3597,13 +3656,18 @@ function findCommonAncestor(paths: string[]): string {
   if (paths.length === 0) return '';
   if (paths.length === 1) return path.dirname(paths[0]!);
 
-  const normalized = paths.map(p => path.resolve(p).toLowerCase());
-  let common = path.dirname(normalized[0]!);
+  const resolved = paths.map(p => path.resolve(p));
+  let common = path.dirname(resolved[0]!);
 
-  for (let i = 1; i < normalized.length; i++) {
-    let current = path.dirname(normalized[i]!);
-    while (current !== '' && !normalized[i]!.startsWith(common + path.sep) && normalized[i]! !== common) {
+  for (let i = 1; i < resolved.length; i++) {
+    const currentKey = pathKey(resolved[i]!);
+    while (common !== '') {
+      const commonKey = pathKey(common);
+      if (currentKey === commonKey || currentKey.startsWith(`${commonKey}/`)) {
+        break;
+      }
       common = path.dirname(common);
+      if (common === path.dirname(common)) break;
     }
     if (common === '') break;
   }
@@ -3640,17 +3704,17 @@ async function determineWorkspaceRoot(
   // Only include paths that are "inside" or "near" the project base to avoid climbing too high.
   // This satisfies the "don't load C:\b4j" requirement.
   const internalPaths = allPaths.filter(p => {
-    const norm = path.resolve(p).toLowerCase();
-    const baseNorm = path.resolve(projectBase).toLowerCase();
-    return norm.startsWith(baseNorm);
+    const norm = pathKey(p);
+    const baseNorm = pathKey(projectBase);
+    return norm === baseNorm || norm.startsWith(`${baseNorm}/`);
   });
 
   const commonAncestor = findCommonAncestor(internalPaths.length > 0 ? internalPaths : [projectFilePath]);
 
   if (commonAncestor) {
     // Ensure we don't go ABOVE the project base conventions
-    const baseNorm = path.resolve(projectBase).toLowerCase();
-    const ancestorNorm = path.resolve(commonAncestor).toLowerCase();
+    const baseNorm = pathKey(projectBase);
+    const ancestorNorm = pathKey(commonAncestor);
     if (ancestorNorm.length < baseNorm.length) {
       return projectBase;
     }
@@ -3670,11 +3734,11 @@ async function determineWorkspaceRoot(
  *  @param workspaceRoot The workspace root folder URI
  */
 function ensureWorkspaceFolder(workspaceRoot: vscode.Uri): void {
-  const normalizedWorkspaceRoot = path.resolve(workspaceRoot.fsPath).toLowerCase();
+  const normalizedWorkspaceRoot = pathKey(workspaceRoot.fsPath);
 
   const existingFolders = vscode.workspace.workspaceFolders ?? [];
   const alreadyOnlyFolder = existingFolders.length === 1 &&
-    path.resolve(existingFolders[0]!.uri.fsPath).toLowerCase() === normalizedWorkspaceRoot;
+    pathKey(existingFolders[0]!.uri.fsPath) === normalizedWorkspaceRoot;
   if (alreadyOnlyFolder) {
     return;
   }
@@ -3692,9 +3756,9 @@ function ensureWorkspaceFolder(workspaceRoot: vscode.Uri): void {
 }
 
 async function waitForWorkspaceFolderLoad(projectRootFsPath: string, timeoutMs = 5000): Promise<void> {
-  const normalized = path.resolve(projectRootFsPath).toLowerCase();
+  const normalized = pathKey(projectRootFsPath);
   const existing = vscode.workspace.workspaceFolders ?? [];
-  if (existing.some((f) => path.resolve(f.uri.fsPath).toLowerCase() === normalized)) {
+  if (existing.some((f) => pathKey(f.uri.fsPath) === normalized)) {
     return;
   }
 
@@ -3707,7 +3771,7 @@ async function waitForWorkspaceFolderLoad(projectRootFsPath: string, timeoutMs =
 
     const disposable = vscode.workspace.onDidChangeWorkspaceFolders((ev) => {
       const now = vscode.workspace.workspaceFolders ?? [];
-      if (now.some((f) => path.resolve(f.uri.fsPath).toLowerCase() === normalized)) {
+      if (now.some((f) => pathKey(f.uri.fsPath) === normalized)) {
         clearTimeout(timer);
         disposable.dispose();
         resolve();
@@ -5254,6 +5318,32 @@ function scheduleMemberSuggest(document: vscode.TextDocument): void {
   }, 0);
 }
 
+/** Remove stale per-file B4X exclusions previously written by the extension. */
+async function resetExplorerFilter(projectFilePath?: string): Promise<void> {
+  try {
+    const config = vscode.workspace.getConfiguration('files');
+    const existingExclude = config.get<Record<string, any>>('exclude', {});
+    const newExclude = { ...existingExclude };
+
+    for (const key of Object.keys(newExclude)) {
+      if (/\.(bas|b4a|b4i|b4j|b4r)$/i.test(key)) {
+        delete newExclude[key];
+      }
+    }
+
+    if (projectFilePath) {
+      const relativeProject = vscode.workspace.asRelativePath(vscode.Uri.file(projectFilePath), false);
+      if (relativeProject in newExclude) {
+        delete newExclude[relativeProject];
+      }
+    }
+
+    await config.update('exclude', newExclude, vscode.ConfigurationTarget.Workspace);
+  } catch (err) {
+    console.error('B4X: failed to reset explorer filter', err);
+  }
+}
+
 /**
  * Dynamically updates workspace 'files.exclude' to show ONLY B4X modules
  * that are referenced by the current project file. This helps remove clutter
@@ -5262,8 +5352,8 @@ function scheduleMemberSuggest(document: vscode.TextDocument): void {
 async function applyExplorerFilter(projectFilePath: string, referencedFiles: string[]) {
   try {
     const projectRoot = getB4xProjectRoot(projectFilePath);
-    const referencedSet = new Set(referencedFiles.map(f => path.resolve(f).toLowerCase()));
-    referencedSet.add(path.resolve(projectFilePath).toLowerCase());
+    const referencedSet = new Set(referencedFiles.map(f => pathKey(f)));
+    referencedSet.add(pathKey(projectFilePath));
 
     // Generate referenced main generated file path
     const mainGenDir = path.join(path.dirname(projectFilePath), '.vscode', 'b4x-main');
@@ -5282,7 +5372,7 @@ async function applyExplorerFilter(projectFilePath: string, referencedFiles: str
     const newExclude = { ...existingExclude };
     
     for (const fileUri of b4xFiles) {
-      const fullPath = path.resolve(fileUri.fsPath).toLowerCase();
+      const fullPath = pathKey(fileUri.fsPath);
       const relative = vscode.workspace.asRelativePath(fileUri, false);
       
       if (!referencedSet.has(fullPath)) {

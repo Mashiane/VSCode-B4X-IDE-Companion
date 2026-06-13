@@ -61,15 +61,9 @@ export class WorkspaceClassStore {
     // base paths again. This eliminates duplicate filesystem checks.
     preconfirmedFiles?: string[],
   ): Promise<void> {
-    console.log(`[B4X TRACE ${new Date().toISOString()}] WorkspaceClassStore.refresh.enter`);
-    console.log(`[B4X DEBUG] refresh called with allowedModuleBasePaths:`, allowedModuleBasePaths ? Array.from(allowedModuleBasePaths) : 'undefined');
-    console.log(`[B4X DEBUG] refresh preconfirmedFiles:`, preconfirmedFiles);
-    console.log(`[B4X DEBUG] refresh stack trace:`, new Error().stack);
-
     // Defensive: callers sometimes pass `undefined` here (see logs). Coerce to
     // an empty array so downstream logic can assume an array type.
     if (!Array.isArray(preconfirmedFiles)) {
-      console.log(`[B4X DEBUG] preconfirmedFiles was ${typeof preconfirmedFiles}; coercing to []`);
       preconfirmedFiles = [];
     }
     this.setAllowedModuleBasePaths(allowedModuleBasePaths);
@@ -81,25 +75,18 @@ export class WorkspaceClassStore {
     // by a targeted discovery routine) — this avoids re-checking candidates.
     const uniquePaths = new Set<string>();
     if (preconfirmedFiles.length > 0) {
-      console.log(`[B4X DEBUG] using preconfirmedFiles:`, preconfirmedFiles);
       for (const p of preconfirmedFiles) uniquePaths.add(p);
     } else {
       if (!this.allowedModuleBasePaths || this.allowedModuleBasePaths.size === 0) {
-        console.log(`[B4X DEBUG] early return - no allowedModuleBasePaths`);
         return;
       }
 
-      console.log(`[B4X DEBUG] probing allowedModuleBasePaths:`, Array.from(this.allowedModuleBasePaths));
       for (const base of this.allowedModuleBasePaths) {
         try {
           const candBas = path.resolve(`${base}.bas`);
-          console.log(`[B4X DEBUG] checking candidate: ${candBas}`);
           const statBas = await fs.stat(candBas).catch(() => undefined);
           if (statBas && statBas.isFile()) {
-            console.log(`[B4X DEBUG] found: ${candBas}`);
             uniquePaths.add(candBas);
-          } else {
-            console.log(`[B4X DEBUG] not found: ${candBas}`);
           }
         } catch {
           // ignore missing candidates

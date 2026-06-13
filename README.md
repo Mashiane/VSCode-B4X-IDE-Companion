@@ -265,6 +265,9 @@ All settings are prefixed with `b4xIntellisense.` in VS Code.
 | `enableTelemetry` | `false` | Opt-in anonymous telemetry for basic feature usage. |
 | `adbPath` | *(auto-detected)* | Path to the adb executable for device operations. |
 | `ffmpegPath` | *(auto-detected)* | Path to the ffmpeg executable for GIF capture. |
+| `wine.enabled` | `false` | Enable Linux/Wine path resolution for B4X installations. |
+| `wine.prefix` | *(auto-detected from `WINEPREFIX` or `~/.wine`)* | Wine prefix used to resolve `b4xV5.ini`, install folders, and Windows-style paths on Linux. |
+| `filterExplorerFiles` | `false` | Hide non-project B4X files from the Explorer. Disabled by default to avoid accidentally hiding modules on Linux/Wine. |
 | `enableUnusedSubDiagnostics` | `true` | Detect unused Private (Hint) and Public (Warning) Subroutines. |
 | `enableUnusedLibraryDiagnostics` | `true` | Detect unused declared libraries (Information severity). |
 
