@@ -249,6 +249,8 @@ All settings are prefixed with `b4xIntellisense.` in VS Code.
 | `b4aInstallPath` | `C:\Program Files\Anywhere Software\B4A` | B4A installation folder (for theme import and builder). |
 | `b4iInstallPath` | `C:\Program Files (x86)\Anywhere Software\B4i` | B4i installation folder. |
 | `b4jInstallPath` | `C:\Program Files\Anywhere Software\B4J` | B4J installation folder. |
+| `b4jJavaPath` | *(system `java`)* | Java executable used to run built B4J jars. |
+| `b4jRunAfterBuild` | `true` | Run the built B4J jar after a successful build. |
 | `b4rInstallPath` | `C:\Program Files\Anywhere Software\B4R` | B4R installation folder. |
 | `autoApplyIni` | `prompt` | Font/theme hint application: `prompt`, `always`, or `never`. |
 | `autoAddProjectFolderOnOpen` | `true` | Add project folder as workspace folder on Open B4X Project. |
@@ -267,6 +269,8 @@ All settings are prefixed with `b4xIntellisense.` in VS Code.
 | `ffmpegPath` | *(auto-detected)* | Path to the ffmpeg executable for GIF capture. |
 | `wine.enabled` | `false` | Enable Linux/Wine path resolution for B4X installations. |
 | `wine.prefix` | *(auto-detected from `WINEPREFIX` or `~/.wine`)* | Wine prefix used to resolve `b4xV5.ini`, install folders, and Windows-style paths on Linux. |
+| `wine.binary` | `wine` | Wine executable used by Linux build commands. |
+| `winepath.binary` | `winepath` | winepath executable used to convert host paths for Wine builders. |
 | `filterExplorerFiles` | `false` | Hide non-project B4X files from the Explorer. Disabled by default to avoid accidentally hiding modules on Linux/Wine. |
 | `enableUnusedSubDiagnostics` | `true` | Detect unused Private (Hint) and Public (Warning) Subroutines. |
 | `enableUnusedLibraryDiagnostics` | `true` | Detect unused declared libraries (Information severity). |

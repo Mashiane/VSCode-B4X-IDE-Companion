@@ -746,7 +746,12 @@
         "b4xIntellisense.b4jJavaPath": {
           "type": "string",
           "default": "",
-          "description": "Optional path to the java.exe executable to use for running B4J applications. If empty, it will try to detect it from B4J settings or use the system default."
+          "description": "Optional path to the Java executable used for running built B4J jars. If empty, the extension uses the system 'java' command."
+        },
+        "b4xIntellisense.b4jRunAfterBuild": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, the Build & Install command runs the built B4J jar after a successful build."
         },
         "b4xIntellisense.b4rInstallPath": {
           "type": "string",
@@ -892,6 +897,16 @@
           "type": "string",
           "default": "",
           "description": "Path to the Wine prefix that contains the B4X installation and b4xV5.ini files. Used on Linux when wine.enabled is true. If empty, ~/.wine or WINEPREFIX is used."
+        },
+        "b4xIntellisense.wine.binary": {
+          "type": "string",
+          "default": "wine",
+          "description": "Wine executable used to run B4J/B4A builders on Linux."
+        },
+        "b4xIntellisense.winepath.binary": {
+          "type": "string",
+          "default": "winepath",
+          "description": "winepath executable used to convert host paths to Windows paths for Wine-based B4X builds."
         },
         "b4xIntellisense.filterExplorerFiles": {
           "type": "boolean",

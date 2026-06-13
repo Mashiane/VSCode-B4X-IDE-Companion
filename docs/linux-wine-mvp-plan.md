@@ -35,5 +35,6 @@ Make the editor path work on Linux when B4X lives inside a Wine prefix.
 - [ ] Add regression tests around path translation and module resolution.
 
 ### H3 — Secondary tooling
-- [ ] Revisit build/install flow.
+- [x] Revisit build/install flow for B4J on Linux/Wine.
+- [ ] Extend Linux/Wine build support to B4A.
 - [ ] Decide whether PowerShell scripts are replaced, wrapped, or left Windows-only.

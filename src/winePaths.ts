@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { execFileSync } from 'node:child_process';
 import { getB4xBooleanSetting, getB4xStringSetting } from './b4xSettings';
 
 const WINDOWS_DRIVE_RE = /^[A-Za-z]:[\\/]/;
@@ -98,6 +99,46 @@ export function translateWinePathToHost(input: string | undefined, baseDir?: str
 export function resolveB4xRelativePath(baseDir: string, b4xPath: string): string {
   const relativeParts = b4xPath.split(/[\\/]+/).filter(Boolean);
   return path.resolve(baseDir, ...relativeParts);
+}
+
+export function getWineBinary(): string {
+  return getB4xStringSetting('wine.binary', '').trim() || 'wine';
+}
+
+export function getWinePathBinary(): string {
+  return getB4xStringSetting('winepath.binary', '').trim() || 'winepath';
+}
+
+export function hostPathToWinePath(hostPath: string): string {
+  const normalizedHostPath = path.resolve(expandHomeDir(hostPath));
+  const prefix = getConfiguredWinePrefix();
+  const winePathBin = getWinePathBinary();
+
+  try {
+    const output = execFileSync(winePathBin, ['-w', normalizedHostPath], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        ...(prefix ? { WINEPREFIX: prefix } : {}),
+      },
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (output) return output;
+  } catch {
+    // fall back to deterministic mapping below
+  }
+
+  if (prefix) {
+    const driveC = path.join(prefix, 'drive_c');
+    const normalizedDriveC = path.resolve(driveC);
+    if (normalizedHostPath === normalizedDriveC || normalizedHostPath.startsWith(`${normalizedDriveC}${path.sep}`)) {
+      const relative = path.relative(normalizedDriveC, normalizedHostPath).split(path.sep).join('\\');
+      return relative ? `C:\\${relative}` : 'C:\\';
+    }
+  }
+
+  const posix = normalizedHostPath.split(path.sep).join('\\');
+  return `Z:${posix.startsWith('\\') ? posix : `\\${posix}`}`;
 }
 
 export function findWineIniPath(platformDirs: string[]): string | undefined {

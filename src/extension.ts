@@ -203,9 +203,9 @@ import { B4xInlineCompletionItemProvider } from './b4xInlineCompletionProvider';
 import { B4xRenameProvider } from './b4xRenameProvider';
 import { B4xCodeLensProvider } from './b4xCodeLensProvider';
 import { B4X_PLATFORMS, getBuilderPath, getDefaultInstallPath, getBuildArgs, needsAdb, getArtifactExt, getSupportedPlatforms } from './platformBuilders';
-import { translateWinePathToHost } from './winePaths';
+import { getConfiguredWinePrefix, getWineBinary, hostPathToWinePath, translateWinePathToHost } from './winePaths';
 import { pathKey } from './pathUtils';
-import { getB4xStringSetting } from './b4xSettings';
+import { getB4xBooleanSetting, getB4xStringSetting } from './b4xSettings';
 
 let pendingSuggestRequest: NodeJS.Timeout | undefined;
 // Disposable handle for the running language client (if started)
@@ -330,6 +330,51 @@ async function resolveAdbPath(context: vscode.ExtensionContext): Promise<string>
     return chosen;
   }
   return '';
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+async function buildAndRunB4JWithWine(
+  installDir: string,
+  projectFilePath: string,
+): Promise<void> {
+  const builderHostPath = getBuilderPath('B4J', installDir);
+  if (!fs.existsSync(builderHostPath)) {
+    throw new Error(`B4JBuilder.exe not found at ${builderHostPath}`);
+  }
+
+  const prefix = getConfiguredWinePrefix();
+  if (!prefix || !fs.existsSync(prefix)) {
+    throw new Error('Wine prefix not found. Configure b4xIntellisense.wine.prefix first.');
+  }
+
+  const projectDir = path.dirname(projectFilePath);
+  const projectFileWin = hostPathToWinePath(projectFilePath);
+  const projectDirWin = hostPathToWinePath(projectDir);
+  const wineBinary = getWineBinary();
+  const javaCommand = getB4xStringSetting('b4jJavaPath', '').trim() || 'java';
+  const jarName = `${path.basename(projectFilePath, path.extname(projectFilePath))}.jar`;
+  const jarPath = path.join(projectDir, 'Objects', jarName);
+  const runAfterBuild = getB4xBooleanSetting('b4jRunAfterBuild', true);
+
+  const term = vscode.window.createTerminal({ name: 'B4X Build (B4J Wine)', cwd: installDir });
+  term.show(true);
+
+  const lines = [
+    `export WINEPREFIX=${shellQuote(prefix)}`,
+    `cd ${shellQuote(installDir)}`,
+    `${shellQuote(wineBinary)} ${shellQuote(builderHostPath)} -Task=Build -BaseFolder=${shellQuote(projectDirWin)} -Project=${shellQuote(projectFileWin)}`,
+  ];
+
+  if (runAfterBuild) {
+    lines.push(
+      `if [ -f ${shellQuote(jarPath)} ]; then ${shellQuote(javaCommand)} -jar ${shellQuote(jarPath)}; else echo 'B4X: jar not found after build: ${jarName}'; fi`,
+    );
+  }
+
+  term.sendText(lines.join('\n'), true);
 }
 // Track current project scope so workspace scanner only runs for the opened project
 let currentProjectDirectory: string | undefined;
@@ -2633,6 +2678,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           void vscode.window.showErrorMessage(`Builder not found: ${builderExe}`);
           return;
         }
+
+        if (process.platform !== 'win32' && getB4xBooleanSetting('wine.enabled', false) && platformKey.toUpperCase() === 'B4J') {
+          await buildAndRunB4JWithWine(installDir, projectFilePath);
+          return;
+        }
+
         const scriptPath = context.asAbsolutePath(path.join('src', 'install.ps1'));
 
         const term = vscode.window.createTerminal({ name: `B4X Install (${platformKey})` });

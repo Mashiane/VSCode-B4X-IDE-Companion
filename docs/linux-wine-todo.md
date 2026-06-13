@@ -15,8 +15,10 @@
 - Validate the same editor flow with at least one B4A project under Wine.
 
 ## Next functional milestone
-- Build / run support for B4J and B4A from Linux through Wine.
-- Decide how far PowerShell-based helper scripts should be supported versus left Windows-only.
+- [x] Initial B4J build/run support on Linux through Wine wired into the existing Build & Install command.
+- [ ] B4A build/install support on Linux through Wine.
+- [ ] Decide how far PowerShell-based helper scripts should be supported versus left Windows-only.
+- [ ] Replace or bypass remaining Windows-only helper flows where needed.
 
 ## UX / settings
 - Ensure Linux/Wine configuration is comfortably editable from the normal VS Code Settings UI, not only by manually editing `settings.json`.
