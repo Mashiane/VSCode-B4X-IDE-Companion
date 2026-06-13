@@ -25,7 +25,9 @@ export async function startLanguageClient(context: vscode.ExtensionContext, onNo
     // Dynamically require to avoid compile-time type dependency on vscode-languageclient
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const lc = require('vscode-languageclient/node');
-    const serverModule = context.asAbsolutePath(path.join('server', 'server.js'));
+    // In a packaged .vsix, node_modules is excluded, so the server is bundled
+    // (self-contained) into dist/server.js by scripts/bundle.js.
+    const serverModule = context.asAbsolutePath(path.join('dist', 'server.js'));
 
     const serverOptions = {
       run: { module: serverModule, transport: lc.TransportKind.stdio },

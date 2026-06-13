@@ -22,3 +22,17 @@ b4a_libraries.txt
 # Explicitly include all .ps1 files
 !src/*.ps1
  # Removed .scripts PS1 inclusion per request (create_backup.ps1 not referenced)
+# --- Linux/Wine fork packaging cleanup ---
+# Heavy non-runtime assets
+*.m4a
+*.pdf
+# The LSP server + worker are now bundled (self-contained) into dist/,
+# so the original server/ JS sources are not needed at runtime.
+server/**
+# Build/dev tooling and logs
+.scripts/**
+scripts/**
+logs/**
+docs/**
+tsconfig*.json
+.gitignore
