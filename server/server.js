@@ -318,8 +318,10 @@ try {
       if (!entry) return;
       const diagnostics = [];
       const symbols = entry.symbols || [];
+      const { canonicalFile } = require('./indexer/globalSymbolTable');
       for (const s of symbols) {
-        const others = docManager.global.getByExactName(s.name).filter((o) => o.file !== s.file);
+        const sFile = canonicalFile(s.file);
+        const others = docManager.global.getByExactName(s.name).filter((o) => canonicalFile(o.file) !== sFile);
         if (others.length > 0) {
           const symLen = Math.max(s.name.length, 1);
           diagnostics.push({ severity: 2, range: { start: { line: s.line, character: 0 }, end: { line: s.line, character: symLen } }, message: `Symbol '${s.name}' is also defined in other files (${others.map((o) => o.file).join(', ')})`, source: 'b4x-lsp' });
