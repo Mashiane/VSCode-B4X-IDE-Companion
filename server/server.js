@@ -312,6 +312,23 @@ try {
     } catch (err) { logger.error('extractMethod.error', { error: err && (err.stack || err.message) }); return null; }
   });
 
+  function isGeneratedMainForProjectFile(fileA, fileB) {
+    const { canonicalFile } = require('./indexer/globalSymbolTable');
+    const a = canonicalFile(fileA);
+    const b = canonicalFile(fileB);
+    const marker = `${pathMod.sep}.vscode${pathMod.sep}b4x-main${pathMod.sep}`;
+
+    const check = (generatedPath, projectPath) => {
+      if (!generatedPath.includes(marker)) return false;
+      if (!/\.(b4a|b4i|b4j|b4r)$/i.test(projectPath)) return false;
+      const generatedDir = pathMod.dirname(generatedPath);           // .../.vscode/b4x-main
+      const projectDir = pathMod.resolve(generatedDir, '..', '..'); // actual project folder
+      return pathMod.dirname(projectPath) === projectDir;
+    };
+
+    return check(a, b) || check(b, a);
+  }
+
   function publishDiagnosticsForUri(uri) {
     try {
       const entry = docManager.docs.get(uri);
@@ -321,7 +338,12 @@ try {
       const { canonicalFile } = require('./indexer/globalSymbolTable');
       for (const s of symbols) {
         const sFile = canonicalFile(s.file);
-        const others = docManager.global.getByExactName(s.name).filter((o) => canonicalFile(o.file) !== sFile);
+        const others = docManager.global.getByExactName(s.name).filter((o) => {
+          const oFile = canonicalFile(o.file);
+          if (oFile === sFile) return false;
+          if (isGeneratedMainForProjectFile(oFile, sFile)) return false;
+          return true;
+        });
         if (others.length > 0) {
           const symLen = Math.max(s.name.length, 1);
           diagnostics.push({ severity: 2, range: { start: { line: s.line, character: 0 }, end: { line: s.line, character: symLen } }, message: `Symbol '${s.name}' is also defined in other files (${others.map((o) => o.file).join(', ')})`, source: 'b4x-lsp' });
