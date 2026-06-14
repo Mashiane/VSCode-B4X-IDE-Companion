@@ -1,0 +1,6 @@
+interface:
+  display_name: "VSCode B4X IDE Companion"
+  short_description: "Repo-specific patterns and workflows for VSCode-B4X-IDE-Companion"
+  default_prompt: "Use the VSCode-B4X-IDE-Companion repo skill to follow existing architecture, testing, and workflow conventions."
+policy:
+  allow_implicit_invocation: true

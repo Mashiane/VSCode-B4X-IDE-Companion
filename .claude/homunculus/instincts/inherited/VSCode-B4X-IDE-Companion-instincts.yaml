@@ -1,0 +1,553 @@
+# Instincts generated from https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+# Generated: 2026-06-14T17:59:08.586Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: VSCode-B4X-IDE-Companion-commit-conventional
+trigger: "when writing a commit message"
+confidence: 0.85
+domain: git
+source: repo-analysis
+source_repo: https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# VSCode B4X IDE Companion Commit Conventional
+
+## Action
+
+Use conventional commit format with prefixes: feat, fix, build
+
+## Evidence
+
+- 5 commits analyzed
+- Detected conventional commit pattern
+- Examples: feat: add linux wine editor MVP, build: package self-contained vsix for linux/wine
+
+---
+id: VSCode-B4X-IDE-Companion-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# VSCode B4X IDE Companion Commit Length
+
+## Action
+
+Keep commit messages concise (~48 characters)
+
+## Evidence
+
+- Average commit message length: 48 chars
+- Based on 5 commits
+
+---
+id: VSCode-B4X-IDE-Companion-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# VSCode B4X IDE Companion Naming Files
+
+## Action
+
+Use camelCase naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: camelCase
+
+---
+id: VSCode-B4X-IDE-Companion-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# VSCode B4X IDE Companion Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: VSCode-B4X-IDE-Companion-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# VSCode B4X IDE Companion Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: VSCode-B4X-IDE-Companion-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# VSCode B4X IDE Companion Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: VSCode-B4X-IDE-Companion-workflow-feature-development-linux-wine-support
+trigger: "when doing feature development linux wine support"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# VSCode B4X IDE Companion Workflow Feature Development Linux Wine Support
+
+## Action
+
+Follow the feature-development-linux-wine-support workflow:
+1. Update or create related documentation in docs/ (e.g., linux-wine-mvp-plan.md, linux-wine-todo.md)
+2. Modify or add implementation files in src/ (e.g., winePaths.ts, platformConfig.ts, extension.ts)
+3. Update package.json to reflect new dependencies or features
+4. Update README.md with new instructions or features
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: docs/linux-wine-mvp-plan.md, docs/linux-wine-todo.md, src/winePaths.ts
+
+---
+id: VSCode-B4X-IDE-Companion-workflow-build-and-release-preparation
+trigger: "when doing build and release preparation"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# VSCode B4X IDE Companion Workflow Build And Release Preparation
+
+## Action
+
+Follow the build-and-release-preparation workflow:
+1. Update or clean .vscodeignore to manage bundled files
+2. Update or create installation/configuration documentation in docs/
+3. Update package.json for version or build changes
+4. Update or run build scripts (e.g., scripts/bundle.js)
+5. Update code to point to new build outputs (e.g., lspClient.ts)
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: .vscodeignore, docs/linux-install-guide.md, package.json
+
+---
+id: vscode-b4x-ide-companion-instinct-file-naming
+trigger: "When creating or renaming files in the codebase"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct File Naming
+
+## Action
+
+Use camelCase for file names
+
+## Evidence
+
+- Pattern in namingConventions.files
+- Observed in src/winePaths.ts, src/platformConfig.ts
+
+---
+id: vscode-b4x-ide-companion-instinct-function-naming
+trigger: "When defining functions"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Function Naming
+
+## Action
+
+Use camelCase for function names
+
+## Evidence
+
+- Pattern in namingConventions.functions
+- Seen in TypeScript code in src/
+
+---
+id: vscode-b4x-ide-companion-instinct-class-naming
+trigger: "When defining classes"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Class Naming
+
+## Action
+
+Use PascalCase for class names
+
+## Evidence
+
+- Pattern in namingConventions.classes
+
+---
+id: vscode-b4x-ide-companion-instinct-constant-naming
+trigger: "When defining constants"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Constant Naming
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for constant names
+
+## Evidence
+
+- Pattern in namingConventions.constants
+
+---
+id: vscode-b4x-ide-companion-instinct-import-style
+trigger: "When importing modules"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Import Style
+
+## Action
+
+Use relative import paths
+
+## Evidence
+
+- Pattern in importStyle
+- Seen in src/ files
+
+---
+id: vscode-b4x-ide-companion-instinct-export-style
+trigger: "When exporting from a module"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Export Style
+
+## Action
+
+Use named exports
+
+## Evidence
+
+- Pattern in exportStyle
+
+---
+id: vscode-b4x-ide-companion-instinct-try-catch
+trigger: "When handling errors in code"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Try Catch
+
+## Action
+
+Use try-catch blocks for error handling
+
+## Evidence
+
+- Pattern in errorHandling.style
+- Seen in TypeScript code
+
+---
+id: vscode-b4x-ide-companion-instinct-git-commit-format
+trigger: "When writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Git Commit Format
+
+## Action
+
+Use conventional commit format with prefixes: feat, fix, build
+
+## Evidence
+
+- Pattern in commits.prefixes
+- Examples: 'feat: add linux wine editor MVP', 'fix(lsp): canonicalize file keys...'
+
+---
+id: vscode-b4x-ide-companion-instinct-git-commit-length
+trigger: "When writing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Git Commit Length
+
+## Action
+
+Keep commit message length around 48 characters on average
+
+## Evidence
+
+- Pattern in commits.averageLength
+
+---
+id: vscode-b4x-ide-companion-instinct-feature-linux-wine-docs
+trigger: "When adding or extending Linux/Wine support"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Feature Linux Wine Docs
+
+## Action
+
+Update or create related documentation in docs/ (e.g., linux-wine-mvp-plan.md, linux-wine-todo.md)
+
+## Evidence
+
+- Workflow: feature-development-linux-wine-support
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-feature-linux-wine-src
+trigger: "When adding or extending Linux/Wine support"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Feature Linux Wine Src
+
+## Action
+
+Modify or add implementation files in src/ (e.g., winePaths.ts, platformConfig.ts, extension.ts)
+
+## Evidence
+
+- Workflow: feature-development-linux-wine-support
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-feature-linux-wine-packagejson
+trigger: "When adding or extending Linux/Wine support"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Feature Linux Wine Packagejson
+
+## Action
+
+Update package.json to reflect new dependencies or features
+
+## Evidence
+
+- Workflow: feature-development-linux-wine-support
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-feature-linux-wine-readme
+trigger: "When adding or extending Linux/Wine support"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Feature Linux Wine Readme
+
+## Action
+
+Update README.md with new instructions or features
+
+## Evidence
+
+- Workflow: feature-development-linux-wine-support
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-release-vscodeignore
+trigger: "When preparing for a new build or release"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Release Vscodeignore
+
+## Action
+
+Update or clean .vscodeignore to manage bundled files
+
+## Evidence
+
+- Workflow: build-and-release-preparation
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-release-docs
+trigger: "When preparing for a new build or release"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Release Docs
+
+## Action
+
+Update or create installation/configuration documentation in docs/
+
+## Evidence
+
+- Workflow: build-and-release-preparation
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-release-packagejson
+trigger: "When preparing for a new build or release"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Release Packagejson
+
+## Action
+
+Update package.json for version or build changes
+
+## Evidence
+
+- Workflow: build-and-release-preparation
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-release-build-script
+trigger: "When preparing for a new build or release"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Release Build Script
+
+## Action
+
+Update or run build scripts (e.g., scripts/bundle.js)
+
+## Evidence
+
+- Workflow: build-and-release-preparation
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-release-lspclient
+trigger: "When preparing for a new build or release"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Release Lspclient
+
+## Action
+
+Update code to point to new build outputs (e.g., lspClient.ts)
+
+## Evidence
+
+- Workflow: build-and-release-preparation
+- Seen in commit sequence and files involved
+
+---
+id: vscode-b4x-ide-companion-instinct-testing-location
+trigger: "When adding or updating tests"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: Mashiane/VSCode-B4X-IDE-Companion
+---
+
+# Vscode B4x Ide Companion Instinct Testing Location
+
+## Action
+
+Place tests in a separate location from source code
+
+## Evidence
+
+- Pattern in architecture.testLocation: 'separate'
+
