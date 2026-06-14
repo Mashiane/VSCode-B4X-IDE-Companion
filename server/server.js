@@ -337,8 +337,12 @@ try {
       const symbols = entry.symbols || [];
       const { canonicalFile } = require('./indexer/globalSymbolTable');
       for (const s of symbols) {
+        if (s.kind === 'sub' && s.visibility === 'private') {
+          continue;
+        }
         const sFile = canonicalFile(s.file);
         const others = docManager.global.getByExactName(s.name).filter((o) => {
+          if (o.kind === 'sub' && o.visibility === 'private') return false;
           const oFile = canonicalFile(o.file);
           if (oFile === sFile) return false;
           if (isGeneratedMainForProjectFile(oFile, sFile)) return false;

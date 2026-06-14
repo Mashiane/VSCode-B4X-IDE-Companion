@@ -15,7 +15,7 @@ function parseFile(text, filePath) {
   const lines = text.split(/\r?\n/);
   const symbols = [];
 
-  const subRegex = /^\s*(?:(?:Public|Private)\s+)?Sub\s+([A-Za-z_][A-Za-z0-9_]*)/i;
+  const subRegex = /^\s*(?:(Public|Private)\s+)?Sub\s+([A-Za-z_][A-Za-z0-9_]*)/i;
   const typeRegex = /^\s*Type\s+([A-Za-z_][A-Za-z0-9_]*)/i;
   const endSubRegex = /^\s*End\s+Sub\b/i;
   const globalsDeclRegex = /^\s*(?:Dim|Public|Private)\s+(.+)$/i;
@@ -26,7 +26,8 @@ function parseFile(text, filePath) {
     const line = lines[i];
     let m = subRegex.exec(line);
     if (m) {
-      const name = m[1];
+      const visibility = (m[1] || '').toLowerCase() || 'default';
+      const name = m[2];
       const lower = name.toLowerCase();
 
       // Enter globals block, but do not index the synthetic block name itself as
@@ -38,7 +39,7 @@ function parseFile(text, filePath) {
       }
 
       insideGlobalsSection = false;
-      symbols.push({ kind: 'sub', name, line: i, file: filePath });
+      symbols.push({ kind: 'sub', name, visibility, line: i, file: filePath });
       continue;
     }
 

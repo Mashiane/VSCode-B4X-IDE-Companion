@@ -2,7 +2,7 @@
   "name": "b4x-intellisense",
   "displayName": "B4X Code IDE Companion",
   "description": "B4X IDE companion for B4A, B4i, B4J, and B4R development in Visual Studio Code. IntelliSense, type inference, go-to-definition, diagnostics, code formatting, library management, and AI integration — all fully offline.",
-  "version": "0.1.422",
+  "version": "0.1.423",
   "publisher": "AneleMbangaMashy",
   "engines": {
     "vscode": "^1.95.0"
