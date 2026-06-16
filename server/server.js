@@ -75,9 +75,12 @@ try {
   });
 
   documents.onDidOpen((change) => {
-    // Skip if already indexed by onDidChangeContent to avoid double-parsing
-    if (docManager.docs.has(change.document.uri)) return;
-    try { docManager.openDocument(change.document.uri, change.document.getText()); } catch (err) { /* ignore */ }
+    // If the file was already indexed from disk during startup, do not reparse it
+    // here — but DO republish diagnostics so stale warnings from a previous server
+    // instance are replaced/cleared by the current rules.
+    if (!docManager.docs.has(change.document.uri)) {
+      try { docManager.openDocument(change.document.uri, change.document.getText()); } catch (err) { /* ignore */ }
+    }
     try { publishDiagnosticsForUri(change.document.uri); } catch (err) { /* ignore */ }
   });
 
