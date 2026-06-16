@@ -15,13 +15,34 @@ class GlobalSymbolTable {
     this._trie = new TrieNode();
     this._symbolId = 0; // monotonically increasing symbol ID
     this._symbolStore = new Map(); // id -> symbol
-    this._fileToIds = new Map(); // filePath -> Set<symbolId>
+    this._fileToIds = new Map(); // canonical filePath -> Set<symbolId>
+  }
+
+  /**
+   * Canonicalize a `file` identifier so that the same physical file is always
+   * keyed identically regardless of whether it arrives as a `file://` URI
+   * (from loadFromDisk / worker results) or a native fs path (from
+   * openDocument / changeDocument). Lower-casing matches B4X's
+   * case-insensitive module semantics and prevents the same module from being
+   * registered multiple times under path-case variants.
+   */
+  static canonicalFile(file) {
+    if (!file) return file;
+    let f = file;
+    if (f.startsWith('file://')) {
+      try {
+        f = decodeURIComponent(new URL(f).pathname).replace(/^\/([A-Za-z]:)/, '$1');
+      } catch {
+        f = f.replace('file://', '');
+      }
+    }
+    return f.toLowerCase();
   }
 
   applyFileSymbols(fileSymbols) {
     if (!fileSymbols || fileSymbols.length === 0) return;
 
-    const filePath = fileSymbols[0].file;
+    const filePath = GlobalSymbolTable.canonicalFile(fileSymbols[0].file);
 
     // Step 1: Remove previous entries for this file from byName and trie
     const oldIds = this._fileToIds.get(filePath);
@@ -49,7 +70,7 @@ class GlobalSymbolTable {
     const newIds = new Set();
     for (const sym of fileSymbols) {
       const id = ++this._symbolId;
-      const symWithId = { ...sym, _id: id };
+      const symWithId = { ...sym, file: filePath, _id: id };
       this._symbolStore.set(id, symWithId);
       newIds.add(id);
 
@@ -62,7 +83,7 @@ class GlobalSymbolTable {
   }
 
   removeFile(filePath) {
-    const ids = this._fileToIds.get(filePath);
+    const ids = this._fileToIds.get(GlobalSymbolTable.canonicalFile(filePath));
     if (!ids) return;
 
     for (const id of ids) {
@@ -149,10 +170,21 @@ class GlobalSymbolTable {
     try {
       const data = JSON.parse(json);
       this._symbolStore = new Map(data.symbolStore);
-      this._fileToIds = new Map(data.fileToIds.map(([file, ids]) => [file, new Set(ids)]));
+      // Canonicalize file keys so legacy snapshots (which may store mixed
+      // file:// URI and native path forms for the same file) collapse into a
+      // single key. Merge id-sets when two keys canonicalize to the same file.
+      const mergedFiles = new Map();
+      for (const [file, ids] of data.fileToIds) {
+        const canon = GlobalSymbolTable.canonicalFile(file);
+        const existing = mergedFiles.get(canon);
+        mergedFiles.set(canon, existing ? new Set([...existing, ...ids]) : new Set(ids));
+      }
+      this._fileToIds = mergedFiles;
       this._symbolId = data.lastId;
 
-      // Rebuild byName and Trie, validating symbols
+      // Rebuild byName and Trie, validating symbols. Canonicalize each
+      // symbol's `file` so duplicates introduced by mixed representations are
+      // not double-counted in byName either.
       this.byName = new Map();
       this._trie = new TrieNode();
 
@@ -162,6 +194,7 @@ class GlobalSymbolTable {
           this._symbolStore.delete(id);
           continue;
         }
+        sym.file = GlobalSymbolTable.canonicalFile(sym.file);
         const key = sym.name.toLowerCase();
         if (!this.byName.has(key)) this.byName.set(key, []);
         this.byName.get(key).push(sym);
@@ -175,4 +208,4 @@ class GlobalSymbolTable {
   }
 }
 
-module.exports = { GlobalSymbolTable };
+module.exports = { GlobalSymbolTable, canonicalFile: GlobalSymbolTable.canonicalFile };

@@ -166,7 +166,16 @@ class LibraryIndex {
       try {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const initSqlJs = require('sql.js');
-        const SQL = await initSqlJs();
+        const SQL = await initSqlJs({
+          locateFile: (file: string) => {
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-var-requires
+              return require.resolve(`sql.js/dist/${file}`);
+            } catch {
+              return path.join(__dirname, file);
+            }
+          },
+        });
         let fileData: Uint8Array | undefined;
         try {
           if (fs.existsSync(dbPath)) {

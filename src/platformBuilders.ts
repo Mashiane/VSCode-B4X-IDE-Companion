@@ -1,3 +1,5 @@
+import * as path from 'node:path';
+
 /**
  * B4X Platform Builder Configuration
  * 
@@ -77,7 +79,7 @@ export function getBuilderPath(platformKey: string, installDir: string): string 
   if (!platform) {
     throw new Error(`Unsupported platform: ${platformKey}`);
   }
-  return `${installDir}\\${platform.builder}`;
+  return path.join(installDir, platform.builder);
 }
 
 /**

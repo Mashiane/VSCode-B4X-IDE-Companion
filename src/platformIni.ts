@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 import { B4xPlatformName, B4xPlatformPathSetting } from './platformConfig';
+import { translateWinePathToHost } from './winePaths';
 
 export interface PlatformIniFolders {
   librariesFolder?: string;
@@ -94,12 +95,17 @@ function parseIniEntries(source: string): Map<string, string> {
 }
 
 function entriesToFolders(entries: Map<string, string>): PlatformIniFolders {
+  const translate = (value?: string): string | undefined => {
+    if (!value) return undefined;
+    return translateWinePathToHost(value) ?? value;
+  };
+
   return {
-    librariesFolder: entries.get('librariesfolder'),
-    additionalLibrariesFolder: entries.get('additionallibrariesfolder'),
-    sharedModulesFolder: entries.get('sharedmodulesfolder'),
-    platformFolder: entries.get('platformfolder'),
-    javacPath: entries.get('javacpath'),
+    librariesFolder: translate(entries.get('librariesfolder')),
+    additionalLibrariesFolder: translate(entries.get('additionallibrariesfolder')),
+    sharedModulesFolder: translate(entries.get('sharedmodulesfolder')),
+    platformFolder: translate(entries.get('platformfolder')),
+    javacPath: translate(entries.get('javacpath')),
   };
 }
 

@@ -2,6 +2,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { B4xPlatformName } from './platformConfig';
+import { isWindowsLikePath, resolveB4xRelativePath, translateWinePathToHost } from './winePaths';
+import { normalizeModuleBasePath, pathKey } from './pathUtils';
 
 /** All recognised B4X project file extensions (lower-case, with leading dot). */
 const B4X_PROJECT_EXTENSIONS = ['.b4a', '.b4i', '.b4j', '.b4r'];
@@ -64,8 +66,8 @@ export async function loadWorkspaceProjectConfig(
   // search for .b4a files.
   if (preferredDocumentUri && cachedProjectConfig?.projectDirectory) {
     try {
-      const preferredPath = path.resolve(preferredDocumentUri.fsPath).toLowerCase();
-      const normalizedCached = path.resolve(cachedProjectConfig.projectDirectory).toLowerCase();
+      const preferredPath = pathKey(preferredDocumentUri.fsPath);
+      const normalizedCached = pathKey(cachedProjectConfig.projectDirectory);
       if (preferredPath === normalizedCached || preferredPath.startsWith(`${normalizedCached}${path.sep}`)) {
         return cachedProjectConfig;
       }
@@ -120,7 +122,6 @@ async function parseProjectFile(
   let fileContent: string;
   try {
     fileContent = await fs.readFile(document.uri.fsPath, 'utf8');
-    console.log(`[B4X DEBUG] parseProjectFile: Read ${fileContent.length} bytes from ${document.uri.fsPath}`);
   } catch (err) {
     console.error(`[B4X ERROR] Failed to read file ${document.uri.fsPath}`, err);
     // Fall back to document-based parsing
@@ -131,11 +132,6 @@ async function parseProjectFile(
   // Use a simple replace + split approach to avoid regex issues
   const normalizedContent = fileContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = normalizedContent.split('\n');
-  console.log(`[B4X DEBUG] parseProjectFile: ${lines.length} lines found`);
-  console.log(`[B4X DEBUG] parseProjectFile: first 15 lines:`);
-  for (let i = 0; i < Math.min(15, lines.length); i++) {
-    console.log(`  Line ${i}: ${JSON.stringify(lines[i])}`);
-  }
 
   for (let lineNumber = 0; lineNumber < lines.length; lineNumber += 1) {
     const line = lines[lineNumber];
@@ -146,7 +142,6 @@ async function parseProjectFile(
     rawLine = rawLine.replace(/^\ufeff/, '').trim();
 
     if (rawLine.includes('@EndOfDesignText@')) {
-      console.log(`[B4X DEBUG] parseProjectFile: Found @EndOfDesignText@ at line ${lineNumber}`);
       break;
     }
     if (!rawLine || !rawLine.includes('=')) {
@@ -164,39 +159,25 @@ async function parseProjectFile(
       continue;
     }
 
-    console.log(`[B4X DEBUG] parseProjectFile: line ${lineNumber} key="${key}" value="${value}"`);
-
     if (/^library\d+$/i.test(key)) {
       // Trim whitespace to tolerate malformed project files and be resilient to
       // stray trailing spaces (e.g. "B4XPages ") that would otherwise fail
       // to match the corresponding library files.
       libraries.add(value.trim().toLowerCase());
-      console.log(`[B4X DEBUG] parseProjectFile: Added library "${value.trim().toLowerCase()}"`);
       continue;
     }
 
     if (/^module\d+$/i.test(key)) {
-      // Strip B4X project file path prefixes: |relative|, |absolute|, |shared|
-      let moduleValue = value.replace(/^\|(?:relative|absolute|shared)\|/i, '');
-
-      // Normalize path separators to backslashes for Windows
-      moduleValue = moduleValue.replace(/\//g, '\\');
-
-      // Build the full path and normalize it (resolves .. and . segments)
-      const modulePath = path.normalize(path.resolve(projectDirectory, moduleValue));
-
-      console.log(`[B4X DEBUG] Parsing ${key}: value="${value}", moduleValue="${moduleValue}", modulePath="${modulePath}"`);
-      console.log(`[B4X DEBUG] Parsing ${key}: projectDirectory="${projectDirectory}"`);
+      const moduleSpec = parseModuleSpec(value);
+      const modulePath = resolveModuleCandidate(projectDirectory, moduleSpec.path);
 
       // Prefer modules that actually exist. Try project-local first, then
       // fall back to shared modules folders.
       let resolvedFile = await resolveExistingModuleFile(modulePath);
 
-      console.log(`[B4X DEBUG] ${key}: resolvedFile="${resolvedFile ?? 'NOT FOUND'}"`);
-
       if (!resolvedFile) {
         for (const shared of sharedModuleFolders) {
-          const sharedCandidate = path.resolve(shared, moduleValue);
+          const sharedCandidate = resolveModuleCandidate(shared, moduleSpec.path);
           resolvedFile = await resolveExistingModuleFile(sharedCandidate);
           if (resolvedFile) break;
         }
@@ -204,8 +185,6 @@ async function parseProjectFile(
 
       const baseToStore = normalizeBasePath(resolvedFile ?? modulePath);
       moduleBasePaths.add(baseToStore);
-
-      console.log(`[B4X DEBUG] ${key}: baseToStore="${baseToStore}"`);
 
       if (resolvedFile) {
         resolvedModuleFiles.push(resolvedFile);
@@ -215,15 +194,6 @@ async function parseProjectFile(
 
   // Ensure any Main code embedded in the .b4a after @EndOfDesignText@ is generated
   await ensureGeneratedMainFile(document, projectDirectory);
-
-  console.log(`[B4X DEBUG] parseProjectFile returning:`, {
-    projectFilePath: document.uri.fsPath,
-    projectDirectory,
-    platform: detectPlatformFromPath(document.uri.fsPath),
-    allowedLibraries: Array.from(libraries),
-    allowedModuleBasePaths: Array.from(moduleBasePaths),
-    allowedModuleFiles: resolvedModuleFiles,
-  });
 
   return {
     projectFilePath: document.uri.fsPath,
@@ -264,9 +234,36 @@ async function ensureGeneratedMainFile(document: vscode.TextDocument, projectDir
 }
 
 
+type B4xModulePathKind = 'relative' | 'absolute' | 'shared' | 'plain';
+
+interface ParsedModuleSpec {
+  kind: B4xModulePathKind;
+  path: string;
+}
+
+function parseModuleSpec(value: string): ParsedModuleSpec {
+  const match = value.match(/^\|(?<kind>relative|absolute|shared)\|(?<rest>.*)$/i);
+  const kind = match?.groups?.kind;
+  const rest = match?.groups?.rest;
+  if (!kind || rest === undefined) {
+    return { kind: 'plain', path: value.trim() };
+  }
+  return {
+    kind: kind.toLowerCase() as B4xModulePathKind,
+    path: rest.trim(),
+  };
+}
+
+function resolveModuleCandidate(baseDir: string, modulePath: string): string {
+  const translatedAbsolute = translateWinePathToHost(modulePath);
+  if (translatedAbsolute && (translatedAbsolute.startsWith(path.sep) || isWindowsLikePath(modulePath))) {
+    return path.normalize(translatedAbsolute);
+  }
+  return resolveB4xRelativePath(baseDir, modulePath);
+}
+
 export function normalizeBasePath(filePath: string): string {
-  const parsed = path.parse(filePath);
-  return path.join(parsed.dir, parsed.name).toLowerCase();
+  return normalizeModuleBasePath(filePath);
 }
 
 /**
@@ -383,8 +380,8 @@ function scoreProjectConfig(config: B4xProjectConfig, preferredDocumentUri?: vsc
     return score;
   }
 
-  const preferredPath = path.resolve(preferredDocumentUri.fsPath).toLowerCase();
-  if (preferredPath === path.resolve(projectFilePath).toLowerCase()) {
+  const preferredPath = pathKey(preferredDocumentUri.fsPath);
+  if (preferredPath === pathKey(projectFilePath)) {
     return SCORE_EXACT_PROJECT_MATCH + score;
   }
 
@@ -394,8 +391,8 @@ function scoreProjectConfig(config: B4xProjectConfig, preferredDocumentUri?: vsc
   }
 
   const projectRoot = getProjectRootFromProjectFile(projectFilePath);
-  const normalizedRoot = path.resolve(projectRoot).toLowerCase();
-  if (preferredPath.startsWith(`${normalizedRoot}${path.sep}`)) {
+  const normalizedRoot = pathKey(projectRoot);
+  if (preferredPath.startsWith(`${normalizedRoot}${path.posix.sep}`) || preferredPath === normalizedRoot) {
     return SCORE_PROJECT_ROOT_MATCH + score;
   }
 
@@ -417,7 +414,7 @@ async function resolveExistingModuleFile(modulePath: string): Promise<string | u
 }
 
 export function isInsideWorkspace(filePath: string): boolean {
-  const normalizedFilePath = path.resolve(filePath).toLowerCase();
+  const normalizedFilePath = pathKey(filePath);
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) {
     // No workspace open — treat everything as "inside" since there's no
@@ -425,7 +422,7 @@ export function isInsideWorkspace(filePath: string): boolean {
     return true;
   }
   return folders.some((folder) => {
-    const normalizedFolder = path.resolve(folder.uri.fsPath).toLowerCase();
-    return normalizedFilePath === normalizedFolder || normalizedFilePath.startsWith(`${normalizedFolder}${path.sep}`);
+    const normalizedFolder = pathKey(folder.uri.fsPath);
+    return normalizedFilePath === normalizedFolder || normalizedFilePath.startsWith(`${normalizedFolder}${path.posix.sep}`);
   });
 }

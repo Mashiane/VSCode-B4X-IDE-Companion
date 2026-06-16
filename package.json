@@ -2,7 +2,7 @@
   "name": "b4x-intellisense",
   "displayName": "B4X Code IDE Companion",
   "description": "B4X IDE companion for B4A, B4i, B4J, and B4R development in Visual Studio Code. IntelliSense, type inference, go-to-definition, diagnostics, code formatting, library management, and AI integration — all fully offline.",
-  "version": "0.1.419",
+  "version": "0.1.424",
   "publisher": "AneleMbangaMashy",
   "engines": {
     "vscode": "^1.95.0"
@@ -746,7 +746,12 @@
         "b4xIntellisense.b4jJavaPath": {
           "type": "string",
           "default": "",
-          "description": "Optional path to the java.exe executable to use for running B4J applications. If empty, it will try to detect it from B4J settings or use the system default."
+          "description": "Optional path to the Java executable used for running built B4J jars. If empty, the extension uses the system 'java' command."
+        },
+        "b4xIntellisense.b4jRunAfterBuild": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, the Build & Install command runs the built B4J jar after a successful build."
         },
         "b4xIntellisense.b4rInstallPath": {
           "type": "string",
@@ -883,6 +888,31 @@
           "default": "",
           "description": "Path to the ffmpeg executable used for GIF capture. Leave empty to auto-detect from common install locations or prompt on first use."
         },
+        "b4xIntellisense.wine.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Linux/Wine path resolution for B4X installations. When enabled, INI files and library paths stored as Windows paths are translated through the configured Wine prefix."
+        },
+        "b4xIntellisense.wine.prefix": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the Wine prefix that contains the B4X installation and b4xV5.ini files. Used on Linux when wine.enabled is true. If empty, ~/.wine or WINEPREFIX is used."
+        },
+        "b4xIntellisense.wine.binary": {
+          "type": "string",
+          "default": "wine",
+          "description": "Wine executable used to run B4J/B4A builders on Linux."
+        },
+        "b4xIntellisense.winepath.binary": {
+          "type": "string",
+          "default": "winepath",
+          "description": "winepath executable used to convert host paths to Windows paths for Wine-based B4X builds."
+        },
+        "b4xIntellisense.filterExplorerFiles": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, hide B4X files not referenced by the active project from the VS Code Explorer. Disabled by default to avoid hiding project files when path resolution is incomplete."
+        },
         "b4xIntellisense.googleSheetUrl": {
           "type": "string",
           "default": "https://docs.google.com/spreadsheets/d/1qFvc3Q70RriJS3m_ywBoJvZ47gSTVAuN_X04SI0_XBw/edit?gid=0",
@@ -968,7 +998,7 @@
     "start-lsp": "node server/server.js",
     "inspect-index": "echo 'inspect-index requires server/indexer/inspect-index.js — not yet migrated'",
     "inspect-index:repair": "echo 'inspect-index:repair requires server/indexer/inspect-index.js — not yet migrated'",
-    "vscode:prepublish": "npm run build",
+    "vscode:prepublish": "node ./scripts/bundle.js",
     "verify:vsix": "node scripts/verify-vsix.js",
     "package:vsix": "npm run build && npx vsce package && npm run verify:vsix"
   },
