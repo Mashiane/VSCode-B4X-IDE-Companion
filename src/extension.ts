@@ -1,5 +1,5 @@
 /**
- * # B4X IntelliSense Extension — Architecture & Flow
+ * # B4X IntelliSense Extension  Architecture & Flow
  *
  * ## Purpose
  * Provides IntelliSense (completion, hover, go-to-definition, signature help, etc.)
@@ -9,65 +9,65 @@
  * **Nothing is assumed. Everything is factual.**
  * Only files confirmed to exist on disk are loaded into IntelliSense.
  * Only libraries explicitly declared in the project file's `LibraryN=` entries are loaded.
- * No cross-platform contamination — a .b4a project loads only B4A libraries, never B4J/B4i/B4R.
+ * No cross-platform contamination  a .b4a project loads only B4A libraries, never B4J/B4i/B4R.
  *
  * ## Platform Flow (Step by Step)
  *
  * ```
  * 1. USER OPENS PROJECT
- *    └─ User selects a .b4a / .b4i / .b4j / .b4r file via "Open B4X Project"
- *    └─ Platform detected from file extension:
- *         .b4a → "b4a"  |  .b4j → "b4j"  |  .b4i → "b4i"  |  .b4r → "b4r"
+ *    +- User selects a .b4a / .b4i / .b4j / .b4r file via "Open B4X Project"
+ *    +- Platform detected from file extension:
+ *         .b4a ? "b4a"  |  .b4j ? "b4j"  |  .b4i ? "b4i"  |  .b4r ? "b4r"
  *
  * 2. LOAD PLATFORM INI (single platform only)
- *    └─ getPlatformSettings("b4a") — loads ONLY the detected platform's INI
- *    └─ INI path discovery order:
+ *    +- getPlatformSettings("b4a")  loads ONLY the detected platform's INI
+ *    +- INI path discovery order:
  *         a) VS Code setting: b4xIntellisense.b4aIniPath
  *         b) %APPDATA%\Anywhere Software\Basic4android\b4xV5.ini  (or B4J/B4i/B4R equivalent)
- *         c) Windows Registry → InstallLocation → <path>\b4xV5.ini
- *    └─ loadConfiguredPlatforms() extracts four folder paths:
- *         • LibrariesFolder         — platform's internal libraries
- *         • AdditionalLibrariesFolder — user's extra libraries
- *         • SharedModuleFolder      — shared .bas modules across projects
- *         • PlatformFolder          — SDK platform path (e.g. android-36)
+ *         c) Windows Registry ? InstallLocation ? <path>\b4xV5.ini
+ *    +- parsePlatformIni() extracts four folder paths:
+ *          LibrariesFolder          platform's internal libraries
+ *          AdditionalLibrariesFolder  user's extra libraries
+ *          SharedModuleFolder       shared .bas modules across projects
+ *          PlatformFolder           SDK platform path (e.g. android-36)
  *
  * 3. PARSE PROJECT FILE
- *    └─ Scan lines BEFORE @EndOfDesignText@ for:
- *         • LibraryN=Core        → allowedLibraries = {"core", "b4xpages", ...}
- *         • ModuleN=|Relative|Main.bas  → allowedModuleBasePaths = {"/path/to/Main"}
- *    └─ Strips |relative|, |absolute|, |shared| prefixes from ModuleN values
- *    └─ Generates .vscode/b4x-main/<Project>_Main.b4x from code after @EndOfDesignText@
+ *    +- Scan lines BEFORE @EndOfDesignText@ for:
+ *          LibraryN=Core        ? allowedLibraries = {"core", "b4xpages", ...}
+ *          ModuleN=|Relative|Main.bas  ? allowedModuleBasePaths = {"/path/to/Main"}
+ *    +- Strips |relative|, |absolute|, |shared| prefixes from ModuleN values
+ *    +- Generates .vscode/b4x-main/<Project>_Main.b4x from code after @EndOfDesignText@
  *
  * 4. RESOLVE ALLOWED LIBRARIES
- *    └─ For each library in allowedLibraries:
+ *    +- For each library in allowedLibraries:
  *         a) Search: LibrariesFolder/<lib>.xml  OR  LibrariesFolder/<lib>/<lib>.xml
  *         b) Search: AdditionalLibrariesFolder/<lib>.xml  (if configured)
- *         c) Search: <lib>.b4xlib  (if no XML found — mutually exclusive)
- *         d) fs.stat() confirms file exists — missing files logged and SKIPPED
- *    └─ Result: activePlatform.assets = { xmlFiles: [...], b4xlibFiles: [...], jarFiles: [] }
+ *         c) Search: <lib>.b4xlib  (if no XML found  mutually exclusive)
+ *         d) fs.stat() confirms file exists  missing files logged and SKIPPED
+ *    +- Result: activePlatform.assets = { xmlFiles: [...], b4xlibFiles: [...], jarFiles: [] }
  *
  * 5. RESOLVE MODULE PATHS
- *    └─ For each ModuleN entry:
- *         a) Project-local: resolve path relative to .b4a's directory → confirm exists
- *         b) Shared fallback: resolve from SharedModuleFolder → confirm exists
+ *    +- For each ModuleN entry:
+ *         a) Project-local: resolve path relative to .b4a's directory ? confirm exists
+ *         b) Shared fallback: resolve from SharedModuleFolder ? confirm exists
  *         c) Missing modules silently skipped
- *    └─ Also collects "external" modules from libraries outside the workspace
+ *    +- Also collects "external" modules from libraries outside the workspace
  *
  * 6. EXTRACT b4xlib MODULES
- *    └─ For each .b4xlib in assets.b4xlibFiles:
+ *    +- For each .b4xlib in assets.b4xlibFiles:
  *         a) Extract .bas files from ZIP to cache directory
  *         b) Register extracted paths as reference modules
  *
  * 7. LOAD INTO INTELLISENSE STORES
- *    └─ xmlLibraries.replaceXmlFiles(xmlFiles)     — parse <class>/<method>/<property>
- *    └─ workspaceClasses.replaceReferenceModules() — parse .bas Subs, Globals, Types
- *    └─ commonClass.syncFrom(xmlLibraries)         — extract Common class (Log, Msgbox, etc.)
- *    └─ primitiveTypes.syncFrom(xmlLibraries)      — type mappings (String→String2, etc.)
+ *    +- xmlLibraries.replaceXmlFiles(xmlFiles)      parse <class>/<method>/<property>
+ *    +- workspaceClasses.replaceReferenceModules()  parse .bas Subs, Globals, Types
+ *    +- commonClass.syncFrom(xmlLibraries)          extract Common class (Log, Msgbox, etc.)
+ *    +- primitiveTypes.syncFrom(xmlLibraries)       type mappings (String?String2, etc.)
  *
  * 8. REGISTER LANGUAGE PROVIDERS
- *    └─ Completion, Hover, Definition, SignatureHelp, References, Folding, Formatting,
+ *    +- Completion, Hover, Definition, SignatureHelp, References, Folding, Formatting,
  *         Rename, CodeLens, DocumentLink, SemanticTokens, etc.
- *    └─ All providers query: WorkspaceClassStore + XmlLibraryStore + CommonClassStore
+ *    +- All providers query: WorkspaceClassStore + XmlLibraryStore + CommonClassStore
  * ```
  *
  * ## What Gets Loaded (Source Map)
@@ -85,21 +85,21 @@
  *
  * ## Graceful Degradation
  *
- * - Missing LibrariesFolder → fallback chain (registry → Program Files) → if all fail, zero libraries
- * - Missing AdditionalLibrariesFolder → only LibrariesFolder searched
- * - Missing SharedModuleFolder → only project-local modules resolved
- * - Missing library files → logged as ERROR, skipped
- * - Missing module files → silently skipped
- * - No LibraryN= entries → no libraries loaded (Core NOT auto-injected — platform-specific)
- * - No ModuleN= entries → no workspace modules indexed
+ * - Missing LibrariesFolder ? fallback chain (registry ? Program Files) ? if all fail, zero libraries
+ * - Missing AdditionalLibrariesFolder ? only LibrariesFolder searched
+ * - Missing SharedModuleFolder ? only project-local modules resolved
+ * - Missing library files ? logged as ERROR, skipped
+ * - Missing module files ? silently skipped
+ * - No LibraryN= entries ? no libraries loaded (Core NOT auto-injected  platform-specific)
+ * - No ModuleN= entries ? no workspace modules indexed
  *
  * ## What This Extension Does NOT Do
  *
- * - Does NOT scan entire library folders — only declared libraries are loaded
- * - Does NOT load libraries from other platforms — strict isolation
- * - Does NOT process JAR files — no XML generation from bytecode
- * - Does NOT parse .bal (Designer layout) files — no designer view IntelliSense
- * - Does NOT assume file existence — every path is validated before loading
+ * - Does NOT scan entire library folders  only declared libraries are loaded
+ * - Does NOT load libraries from other platforms  strict isolation
+ * - Does NOT process JAR files  no XML generation from bytecode
+ * - Does NOT parse .bal (Designer layout) files  no designer view IntelliSense
+ * - Does NOT assume file existence  every path is validated before loading
  *
  * ## Key Files
  *
@@ -112,7 +112,7 @@
  * | `xmlLibraryIndex.ts` | Parses XML library documents into class/method/property data |
  * | `workspaceClassIndex.ts` | Parses .bas modules into Subs, Globals, Types |
  * | `commonClassStore.ts` | Extracts Common class globals from XML (Log, Msgbox, etc.) |
- * | `primitiveTypeStore.ts` | Type mappings (String→String2, Int→Int, etc.) |
+ * | `primitiveTypeStore.ts` | Type mappings (String?String2, Int?Int, etc.) |
  * | `b4xTypeInference.ts` | Infers variable types from Dim declarations |
  *
  * ## Platform INI Locations (Windows)
@@ -130,7 +130,10 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as cp from 'child_process';
+import * as crypto from 'crypto';
 import StreamZip from 'node-stream-zip';
+import * as https from 'node:https';
+import * as zlib from 'node:zlib';
 
 import { B4xClass, B4xEventDef, B4xMethod, B4xProperty } from './types';
 import { PrimitiveClassDef } from './primitiveTypeStore';
@@ -169,9 +172,10 @@ import {
   collectLocalSymbols,
   getLocalTypeDefinition,
 } from './b4xLocalSymbols';
-import { getPlatformSettings, findPlatformInstallDirs } from './platformConfig';
+import { SettingsWebviewPanel } from './providers/SettingsWebviewPanel';
+import { getPlatformSettings, findPlatformInstallDirs, warmPlatformCache } from './platformConfig';
 import { loadConfiguredPlatforms, LoadedPlatformConfig, loadPlatformIni } from './platformIni';
-import { getProjectRootFromProjectFile, loadWorkspaceProjectConfig, isInsideWorkspace, clearProjectConfigCache, detectPlatformFromPath, parseManifestDependsOn, getB4xProjectRoot } from './projectFile';
+import { getProjectRootFromProjectFile, loadWorkspaceProjectConfig, isInsideWorkspace, clearProjectConfigCache, detectPlatformFromPath, parseManifestDependsOn, getB4xProjectRoot, ProjectFileEntry } from './projectFile';
 import { B4xPlatformName } from './platformConfig';
 import { WorkspaceClassStore } from './workspaceClassIndex';
 import { XmlLibraryStore } from './xmlLibraryIndex';
@@ -179,14 +183,34 @@ import { PrimitiveTypeStore } from './primitiveTypeStore';
 import { CommonClassStore } from './commonClassStore';
 import { libraryIndex } from './storage/libraryIndexSqlite';
 import importVsSettingsFile, { tryImportThemeFromPlatformInstall } from './vssettingsImporter';
+import { registerCodeSmellDiagnostics } from './codeSmellDiagnostics';
+import { registerCommunityAiCommands } from './commands/communityAiCommands';
+import { runB4xDoctor } from './b4xDoctorCore';
 import { registerTypeDiagnostics } from './typeDiagnostics';
 import { registerCallSubDiagnostics } from './callSubDiagnostics';
+import { registerUnusedSubDiagnostics } from './unusedSubDiagnostics';
+import { registerUnusedLibraryDiagnostics } from './unusedLibraryDiagnostics';
 import TypeCodeActionProvider from './typeCodeAction';
 import ExtractMethodCodeActionProvider from './extractMethodCodeAction';
 import { startLanguageClient } from './lspClient';
+import { distributeAdditionalLibraries } from './distributeLibraries';
 import { sendRequest } from './lspClient';
 import { registerAutoCloseKeywords } from './b4xAutoclose';
 import { CommandsProvider } from './providers/commandsProvider';
+import { OllamaChatProvider, isOllamaRunning, promptForOllamaModel } from './providers/ollamaProvider';
+import { CLI_TOOLS, ensureCliToolInstalled } from './providers/cliToolDetector';
+import { isDeepSeekRunning, promptForDeepSeekModel } from './providers/deepseekProvider';
+import { CompanionDashboardProvider } from './providers/CompanionDashboardProvider';
+import { LibraryCatalog, ProgressStep } from './libraryCatalog';
+import { LibraryTreeProvider } from './providers/libraryTreeProvider';
+
+// Debug logging function for extension
+function debugLog(...args: any[]) {
+    console.log(`[Extension] ${new Date().toISOString()}`, ...args);
+}
+import { LibraryBrowserProvider } from './providers/libraryBrowserProvider';
+import { ProjectStatisticsProvider } from './providers/projectStatisticsProvider';
+import { BjlEditorProvider } from './providers/bjlEditorProvider';
 import { B4xReferenceProvider } from './b4xReferenceProvider';
 import { B4xFoldingRangeProvider } from './b4xFoldingRangeProvider';
 import { B4xDocumentSymbolProvider } from './b4xDocumentSymbolProvider';
@@ -200,6 +224,8 @@ import { B4xSelectionRangeProvider } from './b4xSelectionRangeProvider';
 import { B4xImplementationProvider } from './b4xImplementationProvider';
 import { B4xTypeDefinitionProvider } from './b4xTypeDefinitionProvider';
 import { B4xInlineCompletionItemProvider } from './b4xInlineCompletionProvider';
+import { registerWarningDiagnostics } from './b4xWarningDiagnostics';
+import { B4XPlatform } from './b4xWarningEngineCore';
 import { B4xRenameProvider } from './b4xRenameProvider';
 import { B4xCodeLensProvider } from './b4xCodeLensProvider';
 import { B4X_PLATFORMS, getBuilderPath, getDefaultInstallPath, getBuildArgs, needsAdb, getArtifactExt, getSupportedPlatforms } from './platformBuilders';
@@ -215,8 +241,59 @@ const GLOBAL_STATE_HAS_BUILDABLE = 'b4x.hasBuildableProject';
 const GLOBAL_STATE_SYSTEM_INI = 'b4x.systemIni';
 const GLOBAL_STATE_LAST_STATUS = 'b4x.lastStatus';
 
-// Extension context reference (set during activate) — used for persisting UI state.
+// Extension context reference (set during activate)  used for persisting UI state.
 let extContext: vscode.ExtensionContext | undefined;
+
+const BLANK_LAYOUT = {
+  LayoutHeader: {
+    Version: 5,
+    GridSize: 10,
+    ControlsHeaders: [{ Name: 'Main', JavaType: '.PaneWrapper$ConcretePaneWrapper', DesignerType: 'Pane' }],
+    Files: [],
+    DesignerScript: ["'All variants script\n", "'Variant specific script: 600x600,scale=1\n"],
+  },
+  Variants: [{ Scale: 1, Width: 600, Height: 600 }],
+  Data: {
+    csType: 'Dbasic.Designer.MetaMain',
+    type: '.PaneWrapper$ConcretePaneWrapper',
+    alpha: { ValueType: 7, Value: 1 },
+    borderColor: { ValueType: 6, Value: '0xFF000000' },
+    borderWidth: { ValueType: 7, Value: 0 },
+    cornerRadius: { ValueType: 7, Value: 0 },
+    drawable: {
+      csType: 'Dbasic.Designer.Drawable.ColorDrawable',
+      type: 'ColorDrawable',
+      color: { ValueType: 6, Value: '0xFFF0F8FF' },
+      colorKey: '-fx-background-color',
+    },
+    duration: 0,
+    enabled: true,
+    eventName: 'MainForm',
+    extraCss: '',
+    file: '',
+    handleResizeEvent: true,
+    javaType: '.PaneWrapper$ConcretePaneWrapper',
+    name: 'Main',
+    orientation: 'INHERIT',
+    parent: '',
+    tag: '',
+    title: 'Form',
+    visible: true,
+    variant0: { left: 0, top: 0, width: 200, height: 200, hanchor: 0, vanchor: 0 },
+    ':kids': {},
+  },
+  FontAwesome: false,
+  MaterialIcons: false,
+};
+
+function extensionForPlatform(platform: string): string {
+  switch (platform.toLowerCase()) {
+    case 'b4a': return '.bal';
+    case 'b4i': return '.bil';
+    case 'b4j': return '.bjl';
+    default: return '.bjl';
+  }
+}
 
 /**
  * Prompts the user to pick a workspace folder when multiple are open.
@@ -330,10 +407,20 @@ async function resolveAdbPath(context: vscode.ExtensionContext): Promise<string>
 }
 // Track current project scope so workspace scanner only runs for the opened project
 let currentProjectDirectory: string | undefined;
+let currentProjectFilePath: string | undefined;
 let currentAllowedModuleBasePaths: ReadonlySet<string> | undefined;
 let currentAllowedLibraries: ReadonlySet<string> | undefined;
+let currentInternalLibrariesFolder: string = '';
+let currentAdditionalLibrariesFolder: string = '';
+let currentSharedModulesFolder: string = '';
+let currentToolsFolder: string = '';
+let currentJavaBin: string = '';
+let currentPlatformFolder: string = '';
+let currentNewProjectDefaultFolder: string = '';
 // Tracks the last set of b4xlib files discovered/loaded for the opened project
 let lastLoadedB4xlibFiles: string[] = [];
+// Tracks how many .bas modules were extracted from b4xlib archives
+let lastB4xlibModuleCount: number = 0;
 
 // Pre-scanned .b4xtemplate files discovered at activation time.
 // Populated once during activate(), read instantly when "New B4X Project from Template" runs.
@@ -351,13 +438,19 @@ templateScanComplete = new Promise<void>((resolve) => {
 // Output channel for debugging and command success/failure tracing
 const outputChannel = vscode.window.createOutputChannel('B4X IntelliSense');
 
-// Persistent status bar item — shows numbered step progress during project-open,
+// Persistent status bar item  shows step progress during project-open,
 // then a steady summary when idle.
+let ollamaClaudeStatusBar: vscode.StatusBarItem | undefined;
 const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 statusBarItem.name = 'B4X IntelliSense';
-statusBarItem.text = '$(symbol-misc) B4X';
-statusBarItem.tooltip = 'B4X IntelliSense';
+statusBarItem.text = '$(sync~spin) B4X: Initializing...';
+statusBarItem.tooltip = 'B4X IntelliSense  Starting up';
 statusBarItem.show();
+
+// Yield to VS Code so the initial "Initializing..." text is rendered before
+// the synchronous setup work below. Without this yield, VS Code batches all
+// UI updates until the first `await` and the user never sees "Initializing...".
+const _yieldToUI: Promise<void> = new Promise(resolve => setTimeout(resolve, 0));
 
 /**
  * Updates the GLOBAL_STATE_HAS_BUILDABLE context key based on workspace contents.
@@ -410,39 +503,40 @@ function updateBuildCommandContext(): void {
 }
 
 // Generation counter to prevent stale step trackers from updating the status bar.
-// Each createStepTracker() captures the current generation — if a newer tracker is
+// Each createStepTracker() captures the current generation  if a newer tracker is
 // created (e.g. user invokes openB4xProject while activation reload is running),
 // the older tracker's writes become no-ops.
 let statusBarGeneration = 0;
 
-/** Lightweight step tracker for numbered status-bar progress.
- *  Each tracker captures a generation — if a newer tracker is created the older
+/** Lightweight step tracker for status-bar progress messages.
+ *  Each tracker captures a generation  if a newer tracker is created the older
  *  one silently stops writing to the status bar so two concurrent flows don't
- *  stomp on each other. */
-function createStepTracker(totalSteps: number) {
+ *  stomp on each other.
+ *
+ *  step() shows a spinner with the current activity label.
+ *  done() shows the final "Ready" state  call it exactly once at the end. */
+function createStepTracker() {
   const myGen = ++statusBarGeneration;
-  let current = 0;
   const isActive = () => myGen === statusBarGeneration;
   return {
-    /** Advance to the next step and update the status bar with a spinner. */
+    /** Show a spinner with the current activity label. */
     step(message: string): void {
-      current = Math.min(current + 1, totalSteps);
-      trace(`statusBar ${current}/${totalSteps}: ${message}`);
+      trace(`statusBar: ${message}`);
       if (!isActive()) { return; }
-      statusBarItem.text = `$(sync~spin) B4X ${current}/${totalSteps}: ${message}`;
-      statusBarItem.tooltip = `B4X IntelliSense — ${message} (step ${current} of ${totalSteps})`;
+      statusBarItem.text = `$(sync~spin) B4X: ${message}`;
+      statusBarItem.tooltip = `B4X IntelliSense  ${message}`;
       try {
-        void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip, step: current, total: totalSteps, gen: myGen });
+        void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip, gen: myGen });
       } catch { /* best-effort persistence */ }
     },
-    /** Show a successful completion state (no spinner). */
+    /** Show the final "Ready" state. Call exactly once when the entire flow completes. */
     done(message: string): void {
       trace(`statusBar done: ${message}`);
       if (!isActive()) { return; }
       statusBarItem.text = `$(check) B4X: ${message}`;
-      statusBarItem.tooltip = `B4X IntelliSense — ${message}`;
+      statusBarItem.tooltip = `B4X IntelliSense  ${message}`;
       try {
-        void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip, step: totalSteps, total: totalSteps, gen: myGen });
+        void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip, gen: myGen });
       } catch { /* best-effort persistence */ }
     },
     /** Show an error state. */
@@ -450,59 +544,50 @@ function createStepTracker(totalSteps: number) {
       trace(`statusBar error: ${message}`);
       if (!isActive()) { return; }
       statusBarItem.text = `$(error) B4X: ${message}`;
-      statusBarItem.tooltip = `B4X IntelliSense — Error: ${message}`;
+      statusBarItem.tooltip = `B4X IntelliSense  Error: ${message}`;
       try {
-        void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip, step: current, total: totalSteps, gen: myGen, error: true });
+        void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip, gen: myGen, error: true });
       } catch { /* best-effort persistence */ }
     },
   };
 }
 
-// Trace helper: writes timestamped entries to the extension output channel and console.
+// Trace helper: writes timestamped entries to the extension output channel.
 function trace(...args: unknown[]): void {
   try {
     const prefix = `[B4X DEBUG ${new Date().toISOString()}]`;
     outputChannel.appendLine(`${prefix} ${args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ')}`);
-    console.log(prefix, ...args);
   } catch {
     // ignore
   }
 }
 
 /**
- * Run an async function and show a status-bar spinner if it takes longer than `showAfterMs`.
- * Restores the previous status text after completion. Best-effort UI updates only.
- */
+ * Run an async function and update the status bar.
+ * When a step tracker is provided, it advances the step immediately.
+ * When no step tracker is provided, shows a delayed spinner after showAfterMs
+ * and sets "Ready" on completion. */
 async function runWithStatus<T>(
   label: string,
   fn: () => Promise<T>,
   steps?: ReturnType<typeof createStepTracker>,
   showAfterMs = 300,
 ): Promise<T> {
-  const prev = statusBarItem?.text ?? '$(symbol-misc) B4X';
-  let shown = false;
-  let stepStarted = false;
+  let shownFallback = false;
   let timer: NodeJS.Timeout | undefined;
 
-  // If a step tracker was provided, advance it immediately so the status bar
-  // shows deterministic step counts (1/10, 2/10, ...). When no tracker is
-  // provided, fall back to the previous delayed spinner behavior.
   if (steps) {
-    try {
-      steps.step(label);
-      stepStarted = true;
-    } catch {
-      /* best-effort */
-    }
+    // Step tracker manages the status bar  just advance the step.
+    try { steps.step(label); } catch { /* best-effort */ }
   } else {
+    // No step tracker  show a delayed spinner so brief operations don't flash.
     timer = setTimeout(() => {
       try {
         statusBarItem.text = `$(sync~spin) B4X: ${label}`;
+        statusBarItem.tooltip = `B4X IntelliSense  ${label}`;
         statusBarItem.show();
-        shown = true;
-      } catch {
-        /* best-effort */
-      }
+        shownFallback = true;
+      } catch { /* best-effort */ }
     }, showAfterMs);
   }
 
@@ -511,11 +596,11 @@ async function runWithStatus<T>(
     const res = await fn();
     const dur = Date.now() - start;
     if (timer) clearTimeout(timer);
-    try {
-      // If a step tracker is active, the tracker manages the status bar.
-      // Only restore the previous text if we were using the standalone spinner.
-      if (shown && !steps) statusBarItem.text = prev;
-    } catch {}
+    // Clear the fallback spinner if we showed one  the caller or next step
+    // will set the correct status bar text.
+    if (shownFallback) {
+      try { statusBarItem.text = '$(check) B4X: Ready'; statusBarItem.tooltip = 'B4X IntelliSense  Ready'; } catch {}
+    }
     if (dur > 2000) {
       trace('longOp', { label, duration: dur });
       try {
@@ -527,10 +612,7 @@ async function runWithStatus<T>(
     return res;
   } catch (err) {
     if (timer) clearTimeout(timer);
-    try {
-      if (stepStarted) steps?.error(label);
-      if (shown && !steps) statusBarItem.text = prev;
-    } catch {}
+    try { if (steps) steps.error(label); } catch {}
     throw err;
   }
 }
@@ -538,10 +620,97 @@ async function runWithStatus<T>(
 // Extract .bas module files from a .b4xlib archive using node-stream-zip.
 // PowerShell Expand-Archive rejects non-.zip extensions, so we use the same
 // library that B4xLibStore uses.  Returns absolute paths to extracted module files.
+/** Extract version from an XML library file by reading the last `<version>...</version>` tag. */
+function extractXmlVersion(xmlPath: string): string {
+  try {
+    const content = fs.readFileSync(xmlPath, 'utf8');
+    // Remove XML comments first to avoid false matches
+    const contentWithoutComments = content.replace(/<!--[\s\S]*?-->/g, '');
+    // Match <version>...</version> (case-insensitive)
+    const match = contentWithoutComments.match(/<version>([^<]+)<\/version>/i);
+    return match ? match[1]!.trim() : '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Fallback: read manifest.txt directly from a ZIP file by parsing the central directory.
+ * Used when StreamZip rejects the file (e.g., entries with backslash paths flagged as zip-slip).
+ */
+function extractManifestFromZipFallback(archivePath: string): string | null {
+  try {
+    const buf = fs.readFileSync(archivePath);
+    let eocdOffset = -1;
+    for (let i = buf.length - 22; i >= 0; i--) {
+      if (buf.readUInt32LE(i) === 0x06054b50) { eocdOffset = i; break; }
+    }
+    if (eocdOffset === -1) return null;
+    const cdOffset = buf.readUInt32LE(eocdOffset + 16);
+    const cdEntries = buf.readUInt16LE(eocdOffset + 10);
+    let offset = cdOffset;
+    for (let i = 0; i < cdEntries; i++) {
+      if (buf.readUInt32LE(offset) !== 0x02014b50) break;
+      const comprMethod = buf.readUInt16LE(offset + 10);
+      const compSize = buf.readUInt32LE(offset + 20);
+      const uncompSize = buf.readUInt32LE(offset + 24);
+      const nameLen = buf.readUInt16LE(offset + 28);
+      const extraLen = buf.readUInt16LE(offset + 30);
+      const commentLen = buf.readUInt16LE(offset + 32);
+      const localHeaderOffset = buf.readUInt32LE(offset + 42);
+      const entryName = buf.toString('utf8', offset + 46, offset + 46 + nameLen);
+      if (entryName.toLowerCase() === 'manifest.txt') {
+        const lhNameLen = buf.readUInt16LE(localHeaderOffset + 26);
+        const lhExtraLen = buf.readUInt16LE(localHeaderOffset + 28);
+        const dataOffset = localHeaderOffset + 30 + lhNameLen + lhExtraLen;
+        if (comprMethod === 0) {
+          return buf.toString('utf8', dataOffset, dataOffset + uncompSize).replace(/^﻿/, '');
+        } else if (comprMethod === 8) {
+          const compressed = buf.subarray(dataOffset, dataOffset + compSize);
+          return zlib.inflateRawSync(compressed).toString('utf8').replace(/^﻿/, '');
+        }
+        return null;
+      }
+      offset += 46 + nameLen + extraLen + commentLen;
+    }
+    return null;
+  } catch { return null; }
+}
+
+/** Extract version from a .b4xlib (ZIP) by reading the `Version=` line in manifest.txt. */
+async function extractB4xlibVersion(archivePath: string): Promise<string> {
+  try {
+    const zip = new StreamZip({ file: archivePath, storeEntries: true });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        zip.on('ready', () => resolve());
+        zip.on('error', (err: Error) => reject(err));
+      });
+      const manifestEntry = Object.entries(zip.entries()).find(([name]) => name.toLowerCase() === 'manifest.txt');
+      if (!manifestEntry) {
+        return '';
+      }
+      const data = zip.entryDataSync(manifestEntry[0]);
+      const text = data.toString('utf8').replace(/^﻿/, '');
+      const match = text.match(/^Version\s*=\s*(.+)$/im);
+      return match ? match[1]!.trim() : '';
+    } finally {
+      await new Promise<void>((r) => zip.close(r));
+    }
+  } catch {
+    const manifest = extractManifestFromZipFallback(archivePath);
+    if (manifest) {
+      const match = manifest.match(/^Version\s*=\s*(.+)$/im);
+      return match ? match[1]!.trim() : '';
+    }
+    return '';
+  }
+}
+
 async function extractModulesFromB4xlib(archivePath: string): Promise<string[]> {
   const cacheBase = libraryIndex.getCacheDir();
   const nameSafe = path.basename(archivePath).replace(/[^a-z0-9\.\-_]/gi, '_');
-  // Async stat — used both for the cache-dir name and later for DB registration.
+  // Async stat  used both for the cache-dir name and later for DB registration.
   const archiveStat = await fs.promises.stat(archivePath).catch(() => undefined);
   const outDir = path.join(cacheBase, `${nameSafe}_${Math.floor(archiveStat ? archiveStat.mtimeMs : Date.now())}`);
   try {
@@ -601,7 +770,7 @@ async function extractModulesFromB4xlib(archivePath: string): Promise<string[]> 
   const resolvedOutDir = path.resolve(outDir);
   const safeResult = result.filter(p => path.resolve(p).startsWith(resolvedOutDir + path.sep));
 
-  // Register extracted files in DB for this archive — reuse the already-fetched archiveStat.
+  // Register extracted files in DB for this archive  reuse the already-fetched archiveStat.
   try {
     const inner = [] as any[];
     for (const p of safeResult) {
@@ -613,7 +782,7 @@ async function extractModulesFromB4xlib(archivePath: string): Promise<string[]> 
       try {
         libraryIndex.upsertB4xlibArchive(archivePath, archiveStat ? Math.floor(archiveStat.mtimeMs) : Date.now(), outDir, inner);
       } catch (err) {
-        console.warn('B4X: failed to upsert b4xlib archive info', archivePath, err);
+        // Failed to upsert b4xlib archive info - silently continue
       }
     })();
   } catch { /* ignore */ }
@@ -622,8 +791,86 @@ async function extractModulesFromB4xlib(archivePath: string): Promise<string[]> 
 }
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   trace('activate.enter');
-  // Capture extension context for helpers that need persistent storage
+
+  // Yield to VS Code so the "Initializing..." status bar text is rendered
+  // before the synchronous setup work below. Without this, VS Code batches
+  // all UI updates and the user never sees early status messages.
+  await _yieldToUI;
+
+  // Idle guard + last-project sync: VS Code open with no workspace folder,
+  // or workspace folders containing zero B4X platform files
+  // (.b4a/.b4i/.b4j/.b4r in root or one level down). Do nothing: no catalog,
+  // no providers, no scans, no status churn. activate() must return so the
+  // host stays fast. Only Open B4X Project / New From Template are registered
+  // so the user can still start explicitly; they re-trigger a full reload path.
+  // When a platform file IS found, it becomes the last-opened project here
+  // (persisted to globalState) so the activation auto-reload below picks up
+  // the new folder instead of a stale project from a previous window.
+  // extContext must be set before any globalState.update call below.
   extContext = context;
+  try {
+    const folders = vscode.workspace.workspaceFolders;
+    const platformRe = /\.(b4a|b4i|b4j|b4r)$/i;
+    const findPlatformFile = async (root: string): Promise<string | undefined> => {
+      let entries: any[];
+      try {
+        entries = await fs.promises.readdir(root, { withFileTypes: true });
+      } catch { return undefined; }
+      // Root entries: files first so we exit fast on a hit.
+      for (const e of entries) {
+        if (!e.isDirectory() && platformRe.test(e.name)) return path.join(root, e.name);
+      }
+      // One level: platform subfolders (B4A/, B4i/, ...) plus any other
+      // immediate subfolder, so single-platform roots and multi-platform
+      // roots are both covered without a deep walk.
+      for (const e of entries) {
+        if (!e.isDirectory()) continue;
+        const sub = path.join(root, e.name);
+        try {
+          const subEntries = await fs.promises.readdir(sub);
+          for (const n of subEntries) {
+            if (platformRe.test(n)) return path.join(sub, n);
+          }
+        } catch { /* ignore unreadable subdir */ }
+      }
+      return undefined;
+    };
+    let foundPlatformFile: string | undefined;
+    if (folders && folders.length > 0) {
+      for (const f of folders) {
+        try {
+          const hit = await findPlatformFile(f.uri.fsPath);
+          if (hit) { foundPlatformFile = hit; break; }
+        } catch { /* unreadable folder counts as empty */ }
+      }
+    }
+    if (!foundPlatformFile) {
+      try { statusBarItem.hide(); } catch {}
+      context.subscriptions.push(
+        vscode.commands.registerCommand('b4xIntellisense.openB4xProject', async () => {
+          void vscode.window.showInformationMessage('B4X: No .b4a/.b4i/.b4j/.b4r project file in this workspace. Open a B4X project folder first.');
+        }),
+        vscode.commands.registerCommand('b4xIntellisense.newB4xProjectFromTemplate', async () => {
+          void vscode.window.showInformationMessage('B4X: No .b4a/.b4i/.b4j/.b4r project file in this workspace. Open a B4X project folder first.');
+        }),
+      );
+      return;
+    }
+    // Found file becomes the last-opened project. Only overwrite when it
+    // differs so we do not churn globalState on every reload of the same folder.
+    try {
+      const prev = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_FILE);
+      if (prev !== foundPlatformFile) {
+        await context.globalState.update(GLOBAL_STATE_LAST_PROJECT_FILE, foundPlatformFile);
+        const ext = path.extname(foundPlatformFile).toLowerCase().replace(/^\./, '');
+        if (ext === 'b4a' || ext === 'b4i' || ext === 'b4j' || ext === 'b4r') {
+          await context.globalState.update(GLOBAL_STATE_LAST_PROJECT_PLATFORM, ext);
+        }
+        try { trace('activate.lastProjectSync', foundPlatformFile); } catch {}
+      }
+    } catch { /* best-effort persistence */ }
+  } catch { /* fall through to normal activation */ }
+
   // Create workspace class store without performing an initial full refresh at activation.
   // The store will be populated later on-demand via `refresh()` or `replaceReferenceModules()`.
   const workspaceClasses = new WorkspaceClassStore();
@@ -631,29 +878,130 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const primitiveTypes = new PrimitiveTypeStore();
   const commonClass = new CommonClassStore();
 
+  // Pre-warm the platform registry cache asynchronously so the first
+  // synchronous getPlatformSettings() call doesn't block the extension host.
+  void warmPlatformCache();
+
   // Ensure the persistent status bar item is disposed when the extension deactivates.
   context.subscriptions.push(statusBarItem, outputChannel);
 
-  // Restore last known status text (best-effort) so user sees persisted UI across restarts
-  try {
-    const last = context.globalState.get<any>(GLOBAL_STATE_LAST_STATUS);
-    if (last && last.text) {
-      // If the persisted status looks like an in-progress/loading message
-      // (spinner or 'Loading' text), treat it as stale on activation and
-      // replace with a Ready state so users don't see an unfinished spinner
-      // after the extension host restarts.
-      const looksInProgress = /sync~spin|loading|scanning|loading xml/i.test(last.text);
-      if (looksInProgress) {
-        statusBarItem.text = '$(check) B4X: Ready';
-        statusBarItem.tooltip = 'B4X IntelliSense — Ready';
-        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
+  // Register Ollama Language Model chat provider so Ollama models appear in
+  // VS Code's Copilot chat model picker.
+  const ollamaProvider = new OllamaChatProvider();
+  context.subscriptions.push(
+    vscode.lm.registerLanguageModelChatProvider('ollama', ollamaProvider),
+  );
+
+  // Register the Companion Dashboard webview in the secondary sidebar
+  const dashboardProvider = new CompanionDashboardProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(CompanionDashboardProvider.viewType, dashboardProvider, { webviewOptions: { retainContextWhenHidden: true } }),
+  );
+
+  // Register the Library Browser (tree view + webview panel)
+  const libraryCatalog = new LibraryCatalog(context);
+  statusBarItem.text = '$(sync~spin) B4X: Loading library catalog...';
+  statusBarItem.tooltip = 'B4X IntelliSense  Loading library catalog';
+  statusBarItem.show();
+  await libraryCatalog.initialize();
+  void vscode.window.showInformationMessage(`B4X: Library catalog loaded  ${libraryCatalog.getEntries().length} entries (${libraryCatalog.source})`);
+  // Pass the library catalog to the dashboard provider for enriched library info
+  dashboardProvider.setLibraryCatalog(libraryCatalog);
+  const libraryTreeProvider = new LibraryTreeProvider(libraryCatalog, context.extensionUri);
+  const libraryTreeView = vscode.window.createTreeView('b4xLibraries', { treeDataProvider: libraryTreeProvider });
+  context.subscriptions.push(libraryTreeView);
+  const libraryBrowser = new LibraryBrowserProvider(context.extensionUri, context, libraryCatalog);
+  const projectStatistics = new ProjectStatisticsProvider(workspaceClasses, xmlLibraries, context.extensionUri, context);
+  const bjlEditor = new BjlEditorProvider(context.extensionUri);
+  context.subscriptions.push(vscode.window.registerCustomEditorProvider(BjlEditorProvider.viewType, bjlEditor as any));
+  context.subscriptions.push(libraryCatalog);
+  registerCommunityAiCommands(context);
+  context.subscriptions.push(
+    vscode.commands.registerCommand('b4xIntellisense.browseLibraries', () => libraryBrowser.show()),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('b4xIntellisense.showProjectStatistics', () => projectStatistics.show()),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('b4xIntellisense.openBjlEditor', async (filePath?: string) => {
+      let uri: vscode.Uri;
+      if (!filePath) {
+        // Open Layout Editor from command palette  create a blank layout for the current platform
+        const platform = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_PLATFORM, 'b4j');
+        const ext = extensionForPlatform(platform);
+        const tempDir = context.globalStorageUri.fsPath;
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        const fileName = `Layout1${ext}`;
+        const tempPath = path.join(tempDir, fileName);
+        fs.writeFileSync(tempPath, JSON.stringify(BLANK_LAYOUT, null, 2), 'utf8');
+        uri = vscode.Uri.file(tempPath);
       } else {
-        statusBarItem.text = last.text;
-        if (last.tooltip) statusBarItem.tooltip = last.tooltip;
+        uri = vscode.Uri.file(filePath);
       }
-      statusBarItem.show();
-    }
-  } catch { /* ignore */ }
+      try {
+        await vscode.commands.executeCommand('vscode.openWith', uri, BjlEditorProvider.viewType, {
+          viewColumn: vscode.ViewColumn.Active,
+          preview: false,
+        });
+        await bjlEditor.reloadEditor(uri);
+      } catch (err) {
+        console.error('[openBjlEditor] vscode.openWith failed:', err);
+        try {
+          await vscode.commands.executeCommand('vscode.open', uri, {
+            viewColumn: vscode.ViewColumn.Active,
+            preview: false,
+          });
+        } catch (err2) {
+          console.error('[openBjlEditor] vscode.open fallback also failed:', err2);
+          void vscode.window.showErrorMessage(`Unable to open layout file: ${path.basename(uri.fsPath)}`);
+        }
+      }
+    }),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('b4xIntellisense.openLibraryDetail', (entry: { key: string }) => {
+      const lib = libraryCatalog.getEntry(entry.key);
+      if (lib) {
+        libraryBrowser.show(lib);
+      }
+    }),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('b4xIntellisense.refreshLibraryCatalog', async () => {
+      try {
+        statusBarItem.text = '$(sync~spin) B4X: Refreshing library catalog...';
+        statusBarItem.tooltip = 'B4X IntelliSense  Refreshing library catalog';
+        statusBarItem.show();
+        libraryCatalog.onProgress((_step: any, message: any, _percent: any) => {
+          statusBarItem.text = `$(sync~spin) B4X: ${message}`;
+        });
+        await libraryCatalog.refresh();
+        libraryTreeProvider.refresh();
+        const count = libraryCatalog.getEntries().length;
+        const lastUpdated = libraryCatalog.lastUpdated;
+        const lastUpdatedStr = lastUpdated > 0
+          ? new Date(lastUpdated).toLocaleString()
+          : 'Unknown';
+        statusBarItem.text = '$(check) B4X: Ready';
+        statusBarItem.tooltip = 'B4X IntelliSense  Ready';
+        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
+        void vscode.window.showInformationMessage(
+          `B4X: Library catalog refreshed  ${count} entries (${libraryCatalog.source})\nLast synced: ${lastUpdatedStr}`,
+        );
+      } catch (err) {
+        statusBarItem.text = '$(error) B4X: Refresh failed';
+        statusBarItem.tooltip = 'B4X IntelliSense  Refresh failed';
+        void vscode.window.showErrorMessage('Failed to refresh library catalog');
+      }
+    }),
+  );
+
+  // Restore last known status text (best-effort) so user sees persisted UI across restarts.
+  // This is deferred until after we know whether a project auto-reload will happen 
+  // if one does, the step tracker drives the status bar and we skip the restore.
+  // (Moved to after hasOpenedProject is determined.)
 
   // Status click handler is registered later (showStatusSummary)
 
@@ -662,56 +1010,140 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const storageBase = context.globalStorageUri?.fsPath;
     if (storageBase) {
       libraryIndex.init(storageBase);
-      console.log('B4X: initialized libraryIndex at', storageBase);
     } else {
       libraryIndex.init();
-      console.log('B4X: initialized libraryIndex at default location');
     }
   } catch (err) {
-    console.warn('B4X: failed to initialize libraryIndex', err);
+    // Failed to initialize libraryIndex - silently continue
   }
   // Do not assume a project is "opened" at activation time. We must wait for the
   // user to explicitly select/open a B4X project via the command before performing
   // heavy initialization (watchers, full platform reload, LSP) or applying INI/theme.
   const lastProjectFile = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_FILE);
-
-  if (lastProjectFile && fs.existsSync(lastProjectFile)) {
-    const folders = vscode.workspace.workspaceFolders;
-    const isWorkspaceEmpty = !folders || folders.length === 0;
-    const cfg = vscode.workspace.getConfiguration('b4xIntellisense');
-    const autoRestore = cfg.get<boolean>('autoRestoreWorkspace', true);
-
-    if (isWorkspaceEmpty && autoRestore) {
-      console.log('B4X: Auto-restoring workspace for', lastProjectFile);
-      void (async () => {
-        try {
-          const workspaceRoot = await determineWorkspaceRoot(lastProjectFile, []);
-          ensureWorkspaceFolder(vscode.Uri.file(workspaceRoot));
-        } catch (err) {
-          console.error('B4X: Failed to auto-restore workspace', err);
-        }
-      })();
-      // Don't return early — continue with activation so commands and views
-      // are registered even in an empty window. The auto-restore will trigger
-      // a workspace folder change which may restart the extension host, but
-      // we still need to register everything in case that restart doesn't happen.
-    }
-  }
-
   // Use globalState (survives workspace-folder changes that restart the extension
   // host).  Guard with fs.existsSync *and* verify the file is actually inside
   // one of the current workspace folders.  Without the workspace-folder check
   // the extension would fully load IntelliSense (libraries, LSP, theme, etc.)
-  // every time VS Code opens — even in empty/unrelated workspaces — because
+  // every time VS Code opens  even in empty/unrelated workspaces  because
   // globalState persists across all windows.
-  const isProjectInWorkspace = (() => {
-    if (!lastProjectFile) return false;
+  // Helper to check if a project file path actually belongs to the current workspace
+  const isFileInCurrentWorkspace = (filePath?: string): boolean => {
+    if (!filePath) return false;
     const folders = vscode.workspace.workspaceFolders;
-    if (!folders || folders.length === 0) return false;
-    const normProject = lastProjectFile.toLowerCase().replace(/\\/g, '/');
-    return folders.some(f => normProject.startsWith(f.uri.fsPath.toLowerCase().replace(/\\/g, '/') + '/'));
-  })();
-  const hasOpenedProject = isProjectInWorkspace && fs.existsSync(lastProjectFile!);
+    if (!folders || folders.length === 0) return true; // No workspace folder open, allow fallback
+    const normFile = path.resolve(filePath).toLowerCase();
+    return folders.some((f) => {
+      const normFolder = path.resolve(f.uri.fsPath).toLowerCase();
+      return normFile.startsWith(normFolder + path.sep) || normFile === normFolder;
+    });
+  };
+
+  const hasOpenedProject = Boolean(lastProjectFile) && fs.existsSync(lastProjectFile!) && isFileInCurrentWorkspace(lastProjectFile);
+
+  // Restore persisted status text only when there's no pending auto-reload.
+  // When a project reload will run, the step tracker drives the status bar.
+  if (!hasOpenedProject) {
+    try {
+      const last = context.globalState.get<any>(GLOBAL_STATE_LAST_STATUS);
+      if (last && last.text) {
+        const looksInProgress = /sync~spin|loading|scanning|loading xml/i.test(last.text);
+        if (looksInProgress) {
+          // Stale spinner from a previous session  replace with Ready
+          statusBarItem.text = '$(check) B4X: Ready';
+          statusBarItem.tooltip = 'B4X IntelliSense  Ready';
+          try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
+        } else {
+          // Restore last known status (e.g. "Ready")
+          statusBarItem.text = last.text;
+          if (last.tooltip) statusBarItem.tooltip = last.tooltip;
+        }
+      } else {
+        // No persisted state  initial install or cleared state; show Ready
+        statusBarItem.text = '$(check) B4X: Ready';
+        statusBarItem.tooltip = 'B4X IntelliSense  Ready';
+        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
+      }
+      statusBarItem.show();
+    } catch {
+      // Best-effort: ensure Ready is shown even if globalState fails
+      statusBarItem.text = '$(check) B4X: Ready';
+      statusBarItem.tooltip = 'B4X IntelliSense  Ready';
+      statusBarItem.show();
+    }
+
+    // Auto-detect B4X project files in the workspace. When no project was
+    // previously opened (hasOpenedProject is false), scan the workspace for
+    // .b4a/.b4i/.b4j/.b4r files and offer to open the first one found.
+    // This eliminates the need to manually run "Open B4X Project" when
+    // the workspace already contains a B4X project.
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      void (async () => {
+        try {
+          const b4xExtensions = /\.(b4a|b4i|b4j|b4r)$/i;
+          const platformDirs = ['B4A', 'B4i', 'B4J', 'B4R'];
+          const candidates: string[] = [];
+
+          for (const folder of workspaceFolders) {
+            const root = folder.uri.fsPath;
+            // Scan platform subfolders (B4A/, B4i/, B4J/, B4R/) for project files
+            for (const plat of platformDirs) {
+              const platDir = path.join(root, plat);
+              try {
+                const entries = await fs.promises.readdir(platDir);
+                for (const entry of entries) {
+                  if (b4xExtensions.test(entry)) {
+                    candidates.push(path.join(platDir, entry));
+                  }
+                }
+              } catch {
+                // Platform directory doesn't exist  skip
+              }
+            }
+            // Also check the root for project files (some projects keep them at root)
+            try {
+              const rootEntries = await fs.promises.readdir(root);
+              for (const entry of rootEntries) {
+                if (b4xExtensions.test(entry)) {
+                  const fullPath = path.join(root, entry);
+                  // Avoid duplicates (file already found in a platform subfolder)
+                  if (!candidates.includes(fullPath)) {
+                    candidates.push(fullPath);
+                  }
+                }
+              }
+            } catch {
+              // Root directory scan failed  skip
+            }
+          }
+
+          if (candidates.length === 1) {
+            // Exactly one project found  auto-open it
+            trace('autoDetect.found', candidates[0]);
+            await vscode.commands.executeCommand('b4xIntellisense.openB4xProject', vscode.Uri.file(candidates[0]!));
+          } else if (candidates.length > 1) {
+            // Multiple projects found  let the user choose
+            trace('autoDetect.multiple', candidates.length);
+            const items = candidates.map((c) => ({
+              label: path.basename(c),
+              description: path.dirname(c),
+              filePath: c,
+            }));
+            const picked = await vscode.window.showQuickPick(items, {
+              placeHolder: 'Multiple B4X projects found. Select one to open:',
+            });
+            if (picked) {
+              await vscode.commands.executeCommand('b4xIntellisense.openB4xProject', vscode.Uri.file(picked.filePath));
+            }
+          }
+          // If no candidates found, the user must manually open a project  that's fine.
+        } catch (err) {
+          trace('autoDetect.error', err instanceof Error ? err.message : String(err));
+        }
+      })();
+    }
+  }
+
   // Sync generated Main .b4x edits back to the B4X project file (content after @EndOfDesignText@)
   const syncGeneratedMainBack = async (document: vscode.TextDocument): Promise<void> => {
     try {
@@ -737,8 +1169,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
 
       if (candidates.length === 0) {
-        // Do not perform workspace-wide search; assume project file lives in a platform subfolder.
-        candidates = [];
+        // Also check project directory root for single-platform project files
+        try {
+          const rootEntries = await fs.promises.readdir(projectDir);
+          const found = rootEntries
+            .filter((n: string) => /\.(b4a|b4i|b4j|b4r)$/i.test(n))
+            .map((n: string) => path.join(projectDir, n));
+          candidates.push(...found);
+        } catch {
+          // ignore
+        }
       }
 
       if (candidates.length === 0) {
@@ -765,14 +1205,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await fs.promises.copyFile(target!, backupPath);
       } catch (err) {
         // If backup fails, do NOT overwrite the project file to avoid data loss
-        console.warn('B4X: failed to create project file backup, skipping sync', err);
         return;
       }
 
       await fs.promises.writeFile(target!, outText, 'utf8');
       void vscode.window.showInformationMessage(`B4X: Synced Main content back to ${path.basename(target!)} (backup created)`);
     } catch (err) {
-      console.warn('B4X: failed to sync generated Main back to project file', err);
+      // Failed to sync - silently continue
     }
   };
 
@@ -791,7 +1230,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       try {
         const hasWorkspaceFolder = !!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0);
         if (!hasWorkspaceFolder) {
-          // console.log('B4X: skipping AutoSave/AutoFormat apply — no workspace folder registered yet');
+          // console.log('B4X: skipping AutoSave/AutoFormat apply  no workspace folder registered yet');
         } else {
           if (systemSettings.autoSave) {
             const filesCfg = vscode.workspace.getConfiguration('files');
@@ -806,7 +1245,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           }
         }
       } catch (err) {
-        console.warn('B4X: failed to apply AutoSave/AutoFormat from system INI', err);
+        // Failed to apply AutoSave/AutoFormat from system INI
       }
 
       try {
@@ -822,16 +1261,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         };
 
         if (systemSettings.fontName2 || typeof systemSettings.fontSize2 === 'number') {
-          // Always apply font hints silently — this function is only called during
+          // Always apply font hints silently  this function is only called during
           // project-open or activation-reload flows where the user has already
           // committed to loading a B4A project.
           await doApplyFont();
         }
       } catch (err) {
-        console.warn('B4X: failed to apply font hints from system INI during reload', err);
+        // Failed to apply font hints from system INI
       }
     } catch (err) {
-      console.warn('B4X: error applying system INI during platform reload', err);
+      // Failed to apply system INI during platform reload
     }
     // trace('applyPersistedSystemIniSettings.exit');
   };
@@ -862,12 +1301,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               await workbenchCfg.update('workbench.colorTheme', themeName, vscode.ConfigurationTarget.Workspace);
               trace('applyPlatformIniHints.themeApplied', themeName);
             } catch (err) {
-              console.warn('B4X: failed to apply workbench.theme from INI', err);
+              // Failed to apply workbench.theme from INI
             }
           }
         };
 
-        // Apply platform INI font/theme hints silently — this function is only
+        // Apply platform INI font/theme hints silently  this function is only
         // called during project-open or activation-reload flows.
         await doApply();
         try {
@@ -882,16 +1321,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               try {
                 await importVsSettingsFile(vscode.Uri.file(found), true);
               } catch (impErr) {
-                console.warn('B4X: failed to auto-import theme', impErr);
+                // Failed to auto-import theme
               }
             }
           }
         } catch (err) {
-          console.warn('B4X: theme import attempt failed', err);
+          // Theme import attempt failed
         }
       }
     } catch (err) {
-      console.warn('B4X: failed to apply font/theme from platform INI', err);
+      // Failed to apply font/theme from platform INI
     }
     // trace('applyPlatformIniHints.exit');
   };
@@ -902,7 +1341,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
    * files, extracts b4xlib modules, syncs common classes and primitive types,
    * and refreshes the workspace class index.
    *
-   * @param opts Options — if `{ applyIniOnly: true }`, returns after INI/theme
+   * @param opts Options  if `{ applyIniOnly: true }`, returns after INI/theme
    *   application (used by the activation reload path).
    * @param steps Optional step tracker for status bar updates.
    */
@@ -918,23 +1357,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       return;
     }
 
-    // ── Step 1: Which platform? — detect from project file extension ──
+    // -- Step 1: Which platform?  detect from project file extension --
     const activeDocumentUri = (() => {
       const lastOpened = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_FILE);
-      if (lastOpened) return vscode.Uri.file(lastOpened);
+      if (lastOpened && isFileInCurrentWorkspace(lastOpened) && fs.existsSync(lastOpened)) {
+        return vscode.Uri.file(lastOpened);
+      }
       return vscode.window.activeTextEditor?.document.uri;
     })();
 
     const firstPass = await loadWorkspaceProjectConfig([], activeDocumentUri);
     const activePlatformName = firstPass.platform;
     if (!activePlatformName) {
-      console.error('[B4X ERROR] No platform detected from project file');
-      trace('reloadPlatformAssets.noActivePlatform — no platform name from project file');
+      trace('reloadPlatformAssets.noActivePlatform  no platform name from project file');
       steps?.error('No platform detected');
       return;
     }
 
-    // ── Step 2: Find install folder from registry → define internal libraries folder ──
+    // -- Step 2: Find install folder from registry ? define internal libraries folder --
     const platformDirCandidates: Record<string, string[]> = {
       b4a: ['B4A', 'Basic4android'],
       b4j: ['B4J'],
@@ -971,7 +1411,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }
 
-    // ── Step 3: Find INI file ──
+    // -- Step 3: Find INI file --
     steps?.step('Loading platform INI...');
     const platformSettings = getPlatformSettings(activePlatformName);
     trace('reloadPlatformAssets.configuredPlatforms', platformSettings.configuredPlatforms.map(p => `${p.platform}=${p.iniPath}`));
@@ -984,7 +1424,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // Apply platform INI theme/font hints
       await applyPlatformIniHints(loadedPlatforms);
     } catch (iniErr) {
-      console.warn('B4X: failed to apply INI settings during reload', iniErr);
+      // Failed to apply INI settings during reload
     }
 
     let activePlatform: LoadedPlatformConfig;
@@ -992,8 +1432,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // If the platform INI cannot be found, fall back to a minimal platform
       // configuration using the inferred internal libraries folder so we can
       // continue scanning workspace modules and any libraries that exist on disk.
-      console.warn(`[B4X WARN] Platform INI not found for '${activePlatformName}', falling back to defaults.`);
-      trace('reloadPlatformAssets.noPlatforms — INI failed to load; using fallback');
+      trace('reloadPlatformAssets.noPlatforms  INI failed to load; using fallback');
       activePlatform = {
         platform: activePlatformName,
         iniPath: '',
@@ -1009,37 +1448,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       activePlatform = loadedPlatforms[0]!;
     }
 
-    // ── Step 4: Parse INI → additional libraries, shared modules, platform folder ──
+    // -- Step 4: Parse INI ? additional libraries, shared modules, tools, platform folder --
     const additionalLibrariesFolder = activePlatform.folders.additionalLibrariesFolder;
     const sharedModulesFolder = activePlatform.folders.sharedModulesFolder;
     const platformFolder = activePlatform.folders.platformFolder;
+    const toolsFolder = activePlatform.folders.toolsFolder;
+    const javaBin = activePlatform.folders.javaBin;
+    const newProjectDefaultFolder = activePlatform.folders.newProjectDefaultFolder;
 
     trace('reloadPlatformAssets.folders', {
       internalLibrariesFolder,
       additionalLibrariesFolder,
       sharedModulesFolder,
+      toolsFolder,
+      javaBin,
       platformFolder,
+      newProjectDefaultFolder,
     });
 
-    // ── Resolve project config using shared modules folder from INI ──
+    // -- Resolve project config using shared modules folder from INI --
     const sharedModuleFolders = sharedModulesFolder ? [sharedModulesFolder] : [];
-    console.log(`[B4X DEBUG] reloadPlatformAssets: calling loadWorkspaceProjectConfig with sharedModuleFolders:`, sharedModuleFolders);
-    
+
     steps?.step('Resolving project config...');
     const projectConfig = await loadWorkspaceProjectConfig(sharedModuleFolders, activeDocumentUri);
     let allowedLibraries = projectConfig.allowedLibraries;
     const allowedModules = projectConfig.allowedModuleBasePaths;
-    
+
     // Apply Explorer filtering to show ONLY project-referenced files
-    if (projectConfig.allowedModuleFiles && projectConfig.projectFilePath) {
-      void applyExplorerFilter(projectConfig.projectFilePath, projectConfig.allowedModuleFiles);
+    // Explorer filtering disabled: all project files remain visible in workspace
+
+    // Push project files to the dashboard Files tab
+    debugLog('[Extension] projectConfig.projectFiles:', projectConfig.projectFiles ? projectConfig.projectFiles.length : 0);
+    if (projectConfig.projectFiles) {
+      debugLog('[Extension] Calling postProjectFiles with', projectConfig.projectFiles.length, 'files');
+      debugLog('[Extension] First file:', projectConfig.projectFiles[0]);
+      dashboardProvider.postProjectFiles(projectConfig.projectFiles);
+      debugLog('[Extension] postProjectFiles called');
+      steps?.step(`${projectConfig.projectFiles.length} project file(s) loaded`);
     }
-    
-    console.log(`[B4X DEBUG] reloadPlatformAssets: projectConfig loaded`, {
-      allowedLibraries: allowedLibraries ? Array.from(allowedLibraries) : [],
-      allowedModules: allowedModules ? Array.from(allowedModules) : [],
-      projectDirectory: projectConfig.projectDirectory,
-    });
 
     // Resolve b4xlib dependencies
     if (allowedLibraries && allowedLibraries.size > 0) {
@@ -1051,18 +1497,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     currentAllowedModuleBasePaths = allowedModules;
     currentAllowedLibraries = allowedLibraries;
     currentProjectDirectory = projectConfig.projectDirectory;
+    currentProjectFilePath = projectConfig.projectFilePath;
+    currentInternalLibrariesFolder = internalLibrariesFolder ?? '';
+    currentAdditionalLibrariesFolder = additionalLibrariesFolder ?? '';
+    currentSharedModulesFolder = sharedModulesFolder ?? '';
+    currentToolsFolder = toolsFolder ?? '';
+    currentJavaBin = javaBin ?? '';
+    currentPlatformFolder = platformFolder ?? '';
+    currentNewProjectDefaultFolder = newProjectDefaultFolder ?? '';
 
-    // ── Scan workspace modules ──
+    // -- Scan workspace modules --
     steps?.step('Scanning workspace modules...');
     await runWithStatus('Scanning workspace modules', async () => await workspaceClasses.refresh(currentAllowedModuleBasePaths), steps);
 
-    // ── Scan library folders for declared libraries ──
+    // -- Scan library folders for declared libraries --
     const searchFolders = [internalLibrariesFolder, ...(additionalLibrariesFolder ? [additionalLibrariesFolder] : [])];
 
     if (allowedLibraries && allowedLibraries.size > 0) {
       const libs = Array.from(allowedLibraries);
       const matchedXml: string[] = [];
       const matchedB4xlib: string[] = [];
+      const missingLibs: string[] = [];
 
       for (const lib of libs) {
         let foundXml = false;
@@ -1105,15 +1560,171 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
 
         if (!foundXml && !foundB4xlib) {
-          console.error(`[B4X ERROR] library '${lib}' -> NOT FOUND (searched: ${searchFolders.join(', ')})`);
+          missingLibs.push(lib);
         }
       }
 
       activePlatform.assets.xmlFiles = dedupePaths(matchedXml);
       activePlatform.assets.b4xlibFiles = dedupePaths(matchedB4xlib);
       activePlatform.assets.jarFiles = [];
-    } else {
-      console.log(`[B4X TRACE] platform=${activePlatformName} -> skipped library scan (no allowedLibraries)`);
+
+      // Push ALL discovered libraries to the dashboard Libraries tab.
+      // Scan both Internal and External folders for .xml and .b4xlib files,
+      // then mark only those declared in the project's LibraryN= as used.
+      // Note: dashboardProvider.postLibraries() will enrich this with catalog info (onlineVersion, forum_thread).
+      const dashboardLibs: { name: string; version: string; onlineVersion: string; source: string; path: string; used: boolean; forum_thread?: string; library_file?: string }[] = [];
+      const allowedSet = allowedLibraries ?? new Set<string>();
+
+      for (const folder of searchFolders) {
+        if (!folder || !fs.existsSync(folder)) continue;
+        const source = (additionalLibrariesFolder && folder.toLowerCase() === additionalLibrariesFolder.toLowerCase()) ? 'External' : 'Internal';
+        try {
+          const entries = fs.readdirSync(folder);
+          for (const entry of entries) {
+            const fullEntry = path.join(folder, entry);
+            let stat: fs.Stats | undefined;
+            try { stat = fs.statSync(fullEntry); } catch { continue; }
+            // Flat .xml and .b4xlib files in the libraries folder
+            if (stat.isFile()) {
+              if (entry.toLowerCase().endsWith('.xml')) {
+                const libName = path.basename(entry, '.xml');
+                const version = extractXmlVersion(fullEntry);
+                dashboardLibs.push({ name: libName, version, onlineVersion: '', source, path: fullEntry, used: allowedSet.has(libName.toLowerCase()) });
+              } else if (entry.toLowerCase().endsWith('.b4xlib')) {
+                const libName = path.basename(entry, '.b4xlib');
+                const version = await extractB4xlibVersion(fullEntry);
+                dashboardLibs.push({ name: libName, version, onlineVersion: '', source, path: fullEntry, used: allowedSet.has(libName.toLowerCase()) });
+              }
+            }
+            // Nested folder pattern: <libName>/<libName>.xml or <libName>/<libName>.b4xlib
+            if (stat.isDirectory()) {
+              const xmlPath = path.join(fullEntry, `${entry}.xml`);
+              const b4xPath = path.join(fullEntry, `${entry}.b4xlib`);
+              try {
+                if (fs.existsSync(xmlPath)) {
+                  const version = extractXmlVersion(xmlPath);
+                  dashboardLibs.push({ name: entry, version, onlineVersion: '', source, path: xmlPath, used: allowedSet.has(entry.toLowerCase()) });
+                }
+              } catch { /* ignore */ }
+              try {
+                if (fs.existsSync(b4xPath)) {
+                  const version = await extractB4xlibVersion(b4xPath);
+                  dashboardLibs.push({ name: entry, version, onlineVersion: '', source, path: b4xPath, used: allowedSet.has(entry.toLowerCase()) });
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        } catch (err) {
+          // Failed to scan library folder
+        }
+      }
+      // Resolve missing libraries: look up in catalog, download if possible
+      if (missingLibs.length > 0) {
+        const destFolder = additionalLibrariesFolder;
+        if (destFolder && !fs.existsSync(destFolder)) {
+          try { fs.mkdirSync(destFolder, { recursive: true }); } catch { /* ignore */ }
+        }
+        let downloadedCount = 0;
+        let missingCount = 0;
+        const downloadedFiles: string[] = [];
+
+        async function downloadFromUrl(url: string, destPath: string): Promise<void> {
+          return new Promise<void>((resolve, reject) => {
+            const file = fs.createWriteStream(destPath);
+            const req = https.get(url, { timeout: 30000 }, (res) => {
+              if ((res.statusCode ?? 0) >= 300 && (res.statusCode ?? 0) < 400 && res.headers.location) {
+                const redirect = https.get(res.headers.location, { timeout: 30000 }, (res2) => {
+                  res2.pipe(file);
+                  file.on('finish', () => { file.close(() => resolve()); });
+                  res2.on('error', reject);
+                });
+                redirect.on('error', reject);
+                redirect.setTimeout(30000, () => { redirect.destroy(); reject(new Error('timeout')); });
+              } else {
+                res.pipe(file);
+                file.on('finish', () => { file.close(() => resolve()); });
+              }
+              res.on('error', reject);
+            });
+            req.on('error', reject);
+            req.setTimeout(30000, () => { req.destroy(); reject(new Error('timeout')); });
+          });
+        }
+
+        for (const lib of missingLibs) {
+          const key = lib.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          const entry = libraryCatalog.getEntry(key);
+          if (entry && entry.library_file && destFolder) {
+            try {
+              const primaryUrl = entry.library_file;
+              const primaryParsed = new URL(primaryUrl);
+              const primaryFileName = decodeURIComponent(primaryParsed.pathname.split('/').pop() || `${lib}.b4xlib`);
+              const primaryDest = path.join(destFolder, primaryFileName);
+              await downloadFromUrl(primaryUrl, primaryDest);
+
+              // For XML-based native libraries, also download the companion .jar file
+              if (primaryFileName.toLowerCase().endsWith('.xml')) {
+                const jarUrl = primaryUrl.replace(/\.xml$/i, '.jar');
+                const jarFileName = primaryFileName.replace(/\.xml$/i, '.jar');
+                const jarDest = path.join(destFolder, jarFileName);
+                await downloadFromUrl(jarUrl, jarDest);
+              }
+
+              // Extract version and add to dashboard
+              const ext = primaryFileName.toLowerCase();
+              let version = '';
+              if (ext.endsWith('.b4xlib')) {
+                version = await extractB4xlibVersion(primaryDest);
+                activePlatform.assets.b4xlibFiles.push(primaryDest);
+              } else if (ext.endsWith('.xml')) {
+                version = extractXmlVersion(primaryDest);
+                activePlatform.assets.xmlFiles.push(primaryDest);
+                const jarFileName = primaryFileName.replace(/\.xml$/i, '.jar');
+                const jarDest = path.join(destFolder, jarFileName);
+                if (fs.existsSync(jarDest)) {
+                  activePlatform.assets.jarFiles.push(jarDest);
+                }
+              }
+              dashboardLibs.push({ name: lib, version, onlineVersion: entry.version || '', source: 'External', path: primaryDest, used: true, forum_thread: entry.forum_thread, library_file: entry.library_file });
+              downloadedFiles.push(primaryFileName);
+              if (ext.endsWith('.xml')) {
+                downloadedFiles.push(primaryFileName.replace(/\.xml$/i, '.jar'));
+              }
+              downloadedCount++;
+            } catch {
+              // Download failed  add as Missing
+              dashboardLibs.push({ name: lib, version: '', onlineVersion: entry.version || '', source: 'Missing', path: '', used: true, forum_thread: entry.forum_thread, library_file: entry.library_file });
+              missingCount++;
+            }
+          } else {
+            // Not in catalog or no download link  add as Missing
+            dashboardLibs.push({ name: lib, version: '', onlineVersion: entry?.version || '', source: 'Missing', path: '', used: true, forum_thread: entry?.forum_thread, library_file: entry?.library_file });
+            missingCount++;
+          }
+        }
+        if (downloadedCount > 0 || missingCount > 0) {
+          let message = '';
+          if (downloadedCount > 0) {
+            message += `Downloaded ${downloadedCount} librar${downloadedCount === 1 ? 'y' : 'ies'}:`;
+            for (const f of downloadedFiles) {
+              message += `\n ${f}`;
+            }
+          }
+          if (missingCount > 0) {
+            message += (message ? '\n' : '') + `${missingCount} not found.`;
+          }
+          void vscode.window.showInformationMessage(message);
+        }
+      }
+
+      dashboardLibs.sort((a, b) => a.name.localeCompare(b.name));
+      debugLog('[Extension] Calling postLibraries with', dashboardLibs.length, 'libraries');
+      dashboardProvider.setLibraryFolders(internalLibrariesFolder ?? '', additionalLibrariesFolder ?? '');
+      libraryBrowser.setLibraryFolders(internalLibrariesFolder ?? '', additionalLibrariesFolder ?? '');
+      dashboardProvider.postLibraries(dashboardLibs);
+      debugLog('[Extension] postLibraries called, first lib:', dashboardLibs[0]);
+      libraryTreeProvider.refresh();
+      steps?.step(`${dashboardLibs.length} librar${dashboardLibs.length === 1 ? 'y' : 'ies'} loaded`);
     }
 
     steps?.step('Scanning library folders...');
@@ -1122,20 +1733,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const platformXmlFiles = activePlatform.assets.xmlFiles;
     const platformB4xlibFiles = activePlatform.assets.b4xlibFiles;
 
-    // Validate file existence before attempting to load — skip anything that doesn't exist.
+    // Validate file existence before attempting to load  skip anything that doesn't exist.
     const existingXml = platformXmlFiles.filter(f => fs.existsSync(f));
     const missingXml = platformXmlFiles.filter(f => !fs.existsSync(f));
     const existingB4xlib = platformB4xlibFiles.filter(f => fs.existsSync(f));
     const missingB4xlib = platformB4xlibFiles.filter(f => !fs.existsSync(f));
+    lastLoadedB4xlibFiles = existingB4xlib;
+
+    // Warn the user about missing library files so they can fix their platform path
+    if (missingXml.length > 0 || missingB4xlib.length > 0) {
+      const missingNames = [
+        ...missingXml.map(f => path.basename(f)),
+        ...missingB4xlib.map(f => path.basename(f)),
+      ];
+      const preview = missingNames.slice(0, 5).join(', ');
+      const suffix = missingNames.length > 5 ? ` and ${missingNames.length - 5} more` : '';
+      void vscode.window.showWarningMessage(
+        `B4X: ${missingNames.length} library file(s) not found: ${preview}${suffix}. Check your platform path in settings.`,
+      );
+    }
     
     steps?.step('Extracting b4xlib modules...');
-    if (missingXml.length > 0) {
-      console.error(`[B4X ERROR] ${missingXml.length} XML files not found on disk, skipped:`, missingXml.map(f => `${path.basename(f)} at ${f}`));
-    }
-    if (missingB4xlib.length > 0) {
-      console.error(`[B4X ERROR] ${missingB4xlib.length} b4xlib files not found on disk, skipped:`, missingB4xlib.map(f => `${path.basename(f)} at ${f}`));
-    }
-
     const allXmlFiles = [...existingXml];
 
     // Extract .bas modules from .b4xlib archives
@@ -1148,33 +1766,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             extractedExternalModules.push(...mods);
           }
         } catch (e) {
-          console.warn('B4X: failed to extract modules from b4xlib', f, e);
+          // Failed to extract modules from b4xlib
         }
       }
     }, steps);
-    // Notify user that b4xlib processing completed
-    try {
-      const processedLibs = existingB4xlib.length;
-      const extractedMods = extractedExternalModules.length;
-      void vscode.window.showInformationMessage(`B4X: Processed ${processedLibs} b4xlib(s) — extracted ${extractedMods} module(s)`);
-    } catch { /* best-effort UI update */ }
+    steps?.step(`Processed ${existingB4xlib.length} b4xlib(s)  extracted ${extractedExternalModules.length} module(s)`);
+    lastB4xlibModuleCount = extractedExternalModules.length;
 
     // Merge allowedModules candidates with b4xlib-extracted modules
     steps?.step('Loading reference modules...');
     const externalCandidates = projectConfig.externalModuleFiles ?? [];
     const existingExternalCandidates = externalCandidates.filter(f => fs.existsSync(f));
     const missingExternalCandidates = externalCandidates.filter(f => !fs.existsSync(f));
-    if (missingExternalCandidates.length > 0) {
-      console.error(`[B4X ERROR] ${missingExternalCandidates.length} external module files not found on disk, skipped:`, missingExternalCandidates.map(f => path.basename(f)));
-    }
 
     const allReferenceModules = dedupePaths([...existingExternalCandidates, ...extractedExternalModules]);
     await runWithStatus('Indexing reference modules', async () => await workspaceClasses.replaceReferenceModules(allReferenceModules), steps);
-    // Notify user that modules/reference files were loaded
-    try {
-      const modulesCount = allReferenceModules.length;
-      void vscode.window.showInformationMessage(`B4X: Loaded ${modulesCount} reference module(s)`);
-    } catch { /* best-effort UI update */ }
+    steps?.step(`Loaded ${allReferenceModules.length} reference module(s)`);
 
     steps?.step('Loading XML libraries...');
     await runWithStatus('Loading XML libraries', async () => await xmlLibraries.replaceXmlFiles(dedupePaths(allXmlFiles)), steps);
@@ -1191,18 +1798,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       referenceModules: allReferenceModules.length,
     });
 
-    // Notify user that XML libraries were loaded
-    try {
-      const xmlLoaded = allXmlFiles.length;
-      void vscode.window.showInformationMessage(`B4X: Loaded ${xmlLoaded} XML file(s)`);
-    } catch { /* best-effort UI update */ }
+    steps?.step(`Loaded ${allXmlFiles.length} XML file(s)`);
 
     // Refresh the Projects view title and contents
     try {
       void vscode.commands.executeCommand('b4xIntellisense.refreshCommandsView');
     } catch { /* ignore */ }
 
-    // Do not set a global "Ready" here — leave final Ready state to the
+    // Do not set a global "Ready" here  leave final Ready state to the
     // enclosing open flow (which will wait for the language server/indexing)
     // or to the caller. We avoid emitting a Ready state prematurely.
   }
@@ -1275,7 +1878,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
           }
         } catch (err) {
-          console.warn(`B4X: failed to extract manifest from ${b4xlibPath}`, err);
+          // Failed to extract manifest from b4xlib
         }
       }
     }
@@ -1327,7 +1930,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   ): Promise<string[]> {
     const cacheBase = libraryIndex.getCacheDir();
     const nameSafe = path.basename(archivePath).replace(/[^a-z0-9\.\-_]/gi, '_');
-    // Async stat — used both for the cache-dir name and later for DB registration.
+    // Async stat  used both for the cache-dir name and later for DB registration.
     const archiveStat = await fs.promises.stat(archivePath).catch(() => undefined);
     const outDir = path.join(cacheBase, `${nameSafe}_${Math.floor(archiveStat ? archiveStat.mtimeMs : Date.now())}_${projectName}`);
     try {
@@ -1384,7 +1987,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Guard against zip entries that may have written files outside outDir (defense-in-depth).
     const resolvedOutDir = path.resolve(outDir);
     const safeResult = result.filter(p => path.resolve(p).startsWith(resolvedOutDir + path.sep));
-    // Register extracted files in DB for this archive — reuse the already-fetched archiveStat.
+    // Register extracted files in DB for this archive  reuse the already-fetched archiveStat.
     try {
       const inner = [];
       for (const p of safeResult) {
@@ -1398,7 +2001,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         try {
           libraryIndex.upsertB4xlibArchive(archivePath, archiveStat ? Math.floor(archiveStat.mtimeMs) : Date.now(), outDir, inner);
         } catch (err) {
-          console.warn('B4X: failed to upsert b4xtemplate archive info', archivePath, err);
+          // Failed to upsert b4xtemplate archive info
         }
       })();
     } catch { /* ignore */ }
@@ -1411,11 +2014,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
    * Returns a promise that resolves when scanning is complete.
    */
   async function scanTemplates(): Promise<void> {
-    // Preserve previous status text so we can restore it when done
-    const _prevStatusText = statusBarItem?.text ?? '$(symbol-misc) B4X';
     try {
       try {
-        statusBarItem.text = '$(sync~spin) Loading B4X templates...';
+        statusBarItem.text = '$(sync~spin) B4X: Loading templates...';
+        statusBarItem.tooltip = 'B4X IntelliSense  Loading templates';
         statusBarItem.show();
         try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
       } catch { /* best-effort UI update */ }
@@ -1435,9 +2037,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const installDir = installDirs[platform.platform];
         if (!librariesFolder && installDir) {
           const defaultLibrariesFolder = path.join(installDir, 'Libraries');
-          if (fs.existsSync(defaultLibrariesFolder)) {
-            librariesFolder = defaultLibrariesFolder;
-          }
+          try {
+            const st = await fs.promises.stat(defaultLibrariesFolder).catch(() => undefined);
+            if (st && st.isDirectory()) {
+              librariesFolder = defaultLibrariesFolder;
+            }
+          } catch { /* ignore */ }
         }
 
         const searchFolders: string[] = [];
@@ -1445,7 +2050,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (additionalFolder) searchFolders.push(additionalFolder);
 
         for (const folder of searchFolders) {
-          if (!fs.existsSync(folder)) continue;
+          let folderStat;
+          try {
+            folderStat = await fs.promises.stat(folder).catch(() => undefined);
+          } catch { continue; }
+          if (!folderStat || !folderStat.isDirectory()) continue;
           try {
             const files = await fs.promises.readdir(folder);
             for (const file of files) {
@@ -1458,12 +2067,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 });
               }
             }
-            // Also check subdirectories
+            // Also check subdirectories (one level, per-subdir errors isolated
+            // so one bad folder cannot stall the whole scan).
             const subdirs = await fs.promises.readdir(folder, { withFileTypes: true });
             for (const subdir of subdirs) {
               if (!subdir.isDirectory()) continue;
               const subdirPath = path.join(folder, subdir.name);
-              const subFiles = await fs.promises.readdir(subdirPath);
+              let subFiles: string[];
+              try {
+                subFiles = await fs.promises.readdir(subdirPath);
+              } catch { continue; }
               for (const file of subFiles) {
                 if (file.toLowerCase().endsWith('.b4xtemplate')) {
                   const displayName = file.substring(0, file.length - '.b4xtemplate'.length);
@@ -1489,18 +2102,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       trace('scanTemplates.done', { count: cachedTemplates.length });
     } catch (err) {
-      console.warn('B4X: failed to scan templates', err);
+      // Failed to scan templates
     } finally {
       // Signal that scanning is complete
       templateScanResolve();
+      // Clear our own spinner when no step-tracker flow took over the bar.
+      // This is the Open-Folder / Open-Recent wedge: with no auto-reload,
+      // nothing else ever resets "Loading templates...".
       try {
-        // Do not restore _prevStatusText here. If we were in a "Ready" state, 
-        // it's likely stale and will be overwritten by the actual project loading flow.
-        // If we were in a "Loading" state, the next step in the sequence will handle it.
-      } catch { /* ignore */ }
+        const last = extContext?.globalState.get(GLOBAL_STATE_LAST_STATUS) as any;
+        const lastText = (last && last.text) || statusBarItem.text || '';
+        if (/Loading templates/i.test(lastText)) {
+          statusBarItem.text = '$(check) B4X: Ready';
+          statusBarItem.tooltip = 'B4X IntelliSense - Ready';
+          statusBarItem.show();
+          try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
+        }
+      } catch {}
       try {
         const tCount = cachedTemplates.length;
-        void vscode.window.showInformationMessage(`B4X: Templates scanned — ${tCount} template(s) available`);
+        void vscode.window.showInformationMessage(`B4X: Templates scanned  ${tCount} template(s) available`);
       } catch { /* best-effort UI update */ }
     }
   }
@@ -1512,7 +2133,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
    * If no templates are found, informs the user and exits.
    */
   async function createNewB4xProjectFromTemplate(context: vscode.ExtensionContext): Promise<void> {
-    const templateSteps = createStepTracker(6);
+    const templateSteps = createStepTracker();
     try {
       templateSteps.step('Selecting template...');
 
@@ -1548,23 +2169,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       templateSteps.step('Naming project...');
       const templateBasename = path.basename(templatePath, '.b4xtemplate');
       const projectName = await vscode.window.showInputBox({
+        title: 'Enter Project Name',
         prompt: 'Enter the project name',
         placeHolder: templateBasename,
         value: templateBasename,
+        ignoreFocusOut: true,
         validateInput: (value) => {
           if (!value || !value.trim()) return 'Project name is required';
-          if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Project name can only contain letters, numbers, and underscores';
+          if (/^[0-9]/.test(value.trim())) return 'Project name cannot start with a number';
+          if (!/^[a-zA-Z0-9]+$/.test(value.trim())) return 'Project name can only contain letters and numbers (no special characters or underscores)';
           return null;
         },
       });
       if (!projectName) {
-        templateSteps.done('Cancelled');
         return; // User cancelled
       }
       const trimmedName = projectName.trim();
 
-      // 5. Select destination folder — only prompt if the workspace folder
-      //    for this platform is not already configured in extension settings.
+      // 5. Select destination folder  resolve a sensible default then always
+      //    show the folder picker so the user stays in control.
+      //    Priority: extension setting ? INI NewProjectDefaultFolder ? no default.
       templateSteps.step('Choosing destination...');
       const cfg = vscode.workspace.getConfiguration('b4xIntellisense');
       const wsSettingKeys: Record<string, string> = {
@@ -1575,27 +2199,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       };
       const wsPlatform = selectedPlatformKey ?? 'b4a';
       const wsSettingKey = wsSettingKeys[wsPlatform] ?? 'b4aWorkspaceFolder';
-      let destinationFolder = cfg.get<string>(wsSettingKey, '') ?? '';
+      let defaultDestination = cfg.get<string>(wsSettingKey, '') ?? '';
 
-      if (!destinationFolder.trim()) {
-        const pick = await vscode.window.showOpenDialog({
-          canSelectFiles: false,
-          canSelectFolders: true,
-          canSelectMany: false,
-          openLabel: 'Select Project Destination Folder',
-        });
-        if (!pick || pick.length === 0) {
-          templateSteps.done('Cancelled');
-          return;
-        }
-        destinationFolder = pick[0]!.fsPath;
-
-        // Persist the chosen folder so we don't prompt again for this platform
-        await cfg.update(wsSettingKey, destinationFolder, vscode.ConfigurationTarget.Global);
+      // Fallback: read NewProjectDefaultFolder from the platform INI if the
+      // extension setting is not configured.
+      if (!defaultDestination.trim()) {
+        try {
+          const platformSettings = getPlatformSettings(wsPlatform as B4xPlatformName);
+          const platformIniSetting = platformSettings.configuredPlatforms.find(p => p.platform === wsPlatform);
+          if (platformIniSetting) {
+            const iniConfig = await loadPlatformIni(platformIniSetting);
+            const iniDefaultFolder = iniConfig?.folders.newProjectDefaultFolder;
+            if (iniDefaultFolder && fs.existsSync(iniDefaultFolder)) {
+              defaultDestination = iniDefaultFolder;
+            }
+          }
+        } catch { /* INI read failed  fall through to folder picker */ }
       }
 
+      // Always show the folder picker so the user can confirm or change it.
+      // Pre-populate with the best default we found.
+      const pickerDefault = defaultDestination.trim()
+        ? vscode.Uri.file(defaultDestination.trim())
+        : undefined;
+      const pick = await vscode.window.showOpenDialog({
+        defaultUri: pickerDefault,
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: 'Select Project Destination Folder',
+      });
+      if (!pick || pick.length === 0) return;
+      const destinationFolder = pick[0]!.fsPath;
+
+      // Persist the chosen folder so the next new-project starts here
+      await cfg.update(wsSettingKey, destinationFolder, vscode.ConfigurationTarget.Global);
+
       // 6. Use the platform captured when the template was selected from the menu.
-      //    No guessing — the platform is known because we stored it during scanning.
+      //    No guessing  the platform is known because we stored it during scanning.
       templateSteps.step('Creating project...');
 
       if (!selectedPlatformKey) {
@@ -1646,7 +2287,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
           const outPath = path.join(projectDir, outName);
           await fs.promises.mkdir(path.dirname(outPath), { recursive: true });
-          
           const data = zip.entryDataSync(entryName);
           await fs.promises.writeFile(outPath, data);
         }
@@ -1680,7 +2320,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
 
-      // 10. Open the project file — triggers the same flow as "Open B4X Project".
+      // 10. Open the project file  triggers the same flow as "Open B4X Project".
       templateSteps.step('Opening project...');
       const projectUri = vscode.Uri.file(projectFilePath);
 
@@ -1698,78 +2338,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('B4X: newB4xProjectFromTemplate failed', err);
-      templateSteps.error(`Failed — ${msg}`);
+      templateSteps.error(`Failed  ${msg}`);
     }
   }
 
   // The language server will be started after the user explicitly opens a project
   // to ensure heavy initialization does not run during activation or before the user selects a B4X project file.
-  console.log('B4X: LSP client start deferred until explicit project open');
-
-  async function startB4XLanguageClient(context: vscode.ExtensionContext, steps?: ReturnType<typeof createStepTracker>, projectFileToReveal?: vscode.Uri): Promise<void> {
-    try {
-      // Dispose previous client if present
-      if (lspClientDisposable) {
-        try { lspClientDisposable.dispose(); } catch { /* ignore */ }
-        lspClientDisposable = undefined;
-      }
-
-      // Indicate LSP startup so the user knows work continues.
-      try {
-        if (steps) steps.step('Starting language server...');
-        statusBarItem.text = `$(sync~spin) B4X: Starting language server...`;
-        statusBarItem.tooltip = 'B4X IntelliSense — Starting language server';
-        statusBarItem.show();
-      } catch { /* ignore UI errors */ }
-
-      const lspDisposable = await startLanguageClient(context, (method: string, params: any) => {
-        try {
-          if (method === 'b4x/indexing') {
-            const phase = params && params.phase;
-            if (phase === 'start') {
-              const total = params.total || 0;
-              try { statusBarItem.text = `$(sync~spin) B4X: Indexing workspace (0/${total})`; statusBarItem.tooltip = `Indexing workspace — 0 of ${total} files`; } catch {}
-            } else if (phase === 'progress') {
-              const processed = params.processed || 0;
-              const total = params.total || 0;
-              try { statusBarItem.text = `$(sync~spin) B4X: Indexing workspace (${processed}/${total})`; statusBarItem.tooltip = `Indexing workspace — ${processed} of ${total} files`; } catch {}
-            } else if (phase === 'done') {
-              try {
-                statusBarItem.text = '$(check) B4X: Ready';
-                statusBarItem.tooltip = 'B4X IntelliSense — Ready';
-                void context.globalState.update(GLOBAL_STATE_LAST_STATUS, {
-                  text: statusBarItem.text,
-                  tooltip: statusBarItem.tooltip,
-                  step: 10,
-                  total: 10,
-                  gen: statusBarGeneration,
-                  ready: true,
-                });
-              } catch { /* best-effort persistence */ }
-            }
-          }
-        } catch { /* swallow notification handler errors */ }
-      });
-
-      if (lspDisposable) { context.subscriptions.push(lspDisposable); lspClientDisposable = lspDisposable; }
-      trace('startB4XLanguageClient.lspStarted');
-
-      // Focus the explorer view and reveal the project file to expand the workspace tree.
-      if (projectFileToReveal) {
-        try {
-          await vscode.commands.executeCommand('workbench.view.explorer');
-          await vscode.commands.executeCommand('revealInExplorer', projectFileToReveal);
-        } catch {
-          // Ignore explorer focus errors — non-critical for project loading
-        }
-      }
-    } catch (lspErr) {
-      console.warn('B4X: failed to start language client', lspErr);
-      if (steps) steps.error('LSP failed');
-      throw lspErr;
-    }
-  }
 
   const selector: vscode.DocumentSelector = [
     { language: 'b4x', scheme: 'file' },
@@ -1779,7 +2353,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     vscode.commands.registerCommand('b4xIntellisense.openB4xProject', async (uri?: vscode.Uri) => {
-      const openSteps = createStepTracker(15);
+      const openSteps = createStepTracker();
+      openSteps.step('Opening project...');
       try {
         trace('openB4xProject.enter');
         const selectedProjectFile = uri ?? await promptForB4xProjectFile();
@@ -1798,7 +2373,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const report = (msg: string) => { progress.report({ message: msg }); openSteps.step(msg); };
         openSteps.step('Opening project file...');
         // If we will start the language server and let it index, suppress
-        // emitting a final Ready state here — wait for the LSP indexing
+        // emitting a final Ready state here  wait for the LSP indexing
         // 'done' notification to set Ready.
         lspIndexingExpected = false;
 
@@ -1828,7 +2403,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         workspaceRoot = await determineWorkspaceRoot(selectedProjectFile.fsPath, []);
         trace('openB4xProject.workspaceRoot', workspaceRoot);
       } catch (err) {
-        console.warn('B4X: failed to determine workspace root from project file, using platform folder', err);
         workspaceRoot = projectRoot;
       }
 
@@ -1860,7 +2434,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           // (folder was already correct), the flow continues normally below.
         }
       } catch (err) {
-        console.warn('B4X: failed to load project folder into IDE', err);
+        // Failed to load project folder into IDE
       }
 
       // Wait for workspace folder to be registered BEFORE opening the document.
@@ -1877,7 +2451,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       try {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
       } catch (err) {
-        console.warn('B4X: failed to close all editors', err);
+        // Failed to close all editors
       }
 
       // Open and show the new project file once, after the slate is clear.
@@ -1885,10 +2459,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       try {
         await vscode.window.showTextDocument(document, { preview: false });
       } catch (err) {
-        console.warn('B4X: failed to open project file', err);
+        // Failed to open project file
       }
 
-      // Fully clear all intellisense state — reloadPlatformAssets will populate
+      // Fully clear all intellisense state  reloadPlatformAssets will populate
       // everything from scratch based on the opened project's allowedLibraries.
       openSteps.step('Clearing previous state...');
       try {
@@ -1898,14 +2472,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         currentAllowedLibraries = undefined;
         currentAllowedModuleBasePaths = undefined;
         currentProjectDirectory = undefined;
+        currentProjectFilePath = undefined;
+        currentInternalLibrariesFolder = '';
+        currentAdditionalLibrariesFolder = '';
+        currentSharedModulesFolder = '';
+        currentToolsFolder = '';
+        currentJavaBin = '';
+        currentPlatformFolder = '';
+        currentNewProjectDefaultFolder = '';
+        lastLoadedB4xlibFiles = [];
+        lastB4xlibModuleCount = 0;
+        // Clear the dashboard Files tab and remove stored files from localStorage
+        dashboardProvider.postProjectFiles([]);
+        dashboardProvider.clearProjectFilesStorage();
+        // Refresh library tree (data may have changed with project context)
+        libraryTreeProvider.refresh();
         // clear the cached project config from a previous load so it is not reused
         clearProjectConfigCache();
-        try { await xmlLibraries.replaceXmlFiles([]); } catch (err) { console.warn('B4X: failed to clear xmlLibraries', err); }
-        // clear common class and primitive types — they will be re-synced from the new XML libraries
+        try { await xmlLibraries.replaceXmlFiles([]); } catch (err) { /* Failed to clear xmlLibraries */ }
+        // clear common class and primitive types  they will be re-synced from the new XML libraries
         commonClass.syncFrom(xmlLibraries);
         primitiveTypes.syncFrom(xmlLibraries);
       } catch (err) {
-        console.warn('B4X: error clearing intellisense state', err);
+        // Error clearing intellisense state
       }
 
       // Intellisense report generation removed from automatic project-open flow.
@@ -1927,7 +2516,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               openSteps.error('No libraries loaded');
             }
             try {
-              // Libraries finished loading — advance the tracker but DO NOT
+              // Libraries finished loading  advance the tracker but DO NOT
               // mark the overall flow as Ready yet. The language server may
               // still need to start and index; the final Ready state should
               // be emitted only after indexing completes.
@@ -1940,24 +2529,74 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
               lspIndexingExpected = true;
               void (async () => {
                 try {
-                  await startB4XLanguageClient(context, openSteps, selectedProjectFile);
-                } catch (lspErr) {
-                  console.warn('B4X: failed to start language client during autoLoad after workspace load', lspErr);
+                  // Check workspace trust before starting the LSP server.
+                  // The language server requires filesystem access and process
+                  // spawning, which are only available in trusted workspaces.
+                  if (vscode.workspace.isTrusted === false) {
+                    console.warn('B4X: Skipping language server startup  workspace is not trusted.');
+                    void vscode.window.showInformationMessage('B4X: Language server requires a trusted workspace. Trust this folder to enable full IntelliSense.');
+                    return;
+                  }
+
+                  // Dispose previous client if present
+                  if (lspClientDisposable) {
+                    try { lspClientDisposable.dispose(); } catch { /* ignore */ }
+                    lspClientDisposable = undefined;
+                  }
+
+                  // Indicate LSP startup so the user knows work continues.
+                  try {
+                    openSteps.step('Starting language server...');
+                    statusBarItem.show();
+                  } catch { /* ignore UI errors */ }
+
+                  const lspDisposable = await startLanguageClient(context, (method: string, params: any) => {
+                    try {
+                      if (method === 'b4x/indexing') {
+                        const phase = params && params.phase;
+                        if (phase === 'start') {
+                          const total = params.total || 0;
+                          try { statusBarItem.text = `$(sync~spin) B4X: Indexing workspace (0/${total})`; statusBarItem.tooltip = `Indexing workspace  0 of ${total} files`; } catch {}
+                        } else if (phase === 'progress') {
+                          const processed = params.processed || 0;
+                          const total = params.total || 0;
+                          try { statusBarItem.text = `$(sync~spin) B4X: Indexing workspace (${processed}/${total})`; statusBarItem.tooltip = `Indexing workspace  ${processed} of ${total} files`; } catch {}
+                        } else if (phase === 'done') {
+                          try {
+                            openSteps.done('Ready');
+                          } catch { /* best-effort */ }
+                        }
+                      }
+                    } catch { /* swallow notification handler errors */ }
+                  }, { projectRoot: workspaceRoot });
+
+                  if (lspDisposable) { context.subscriptions.push(lspDisposable); lspClientDisposable = lspDisposable; }
+                  trace('openB4xProject.lspStarted');
+                  void vscode.window.showInformationMessage(`B4X: Language server started  indexing ${workspaceRoot}`);
+
+                  // Focus the explorer view and reveal the project file to expand the workspace tree.
+                  try {
+                    await vscode.commands.executeCommand('workbench.view.explorer');
+                    await vscode.commands.executeCommand('revealInExplorer', selectedProjectFile);
+                  } catch {
+                    // Ignore explorer focus errors  non-critical for project loading
+                  }
+                  } catch (lspErr) {
+                  openSteps.error('LSP failed');
+                  // If LSP failed to start, we should allow the open flow to
+                  // mark Ready since no indexing will occur.
                   lspIndexingExpected = false;
-                  statusBarItem.text = '$(check) B4X: Ready (No LSP)';
                 }
               })();
             } catch (err) {
               // Preserve previous behavior: if something unexpected happens here
               // surface it via the step tracker.
               const msg = err instanceof Error ? err.message : String(err);
-              console.warn('B4X: auto-load after workspace load failed', err);
-              openSteps.error(`Load failed — ${msg}`);
+              openSteps.error(`Load failed  ${msg}`);
             }
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
-            console.warn('B4X: auto-load after workspace load failed', err);
-            openSteps.error(`Load failed — ${msg}`);
+            openSteps.error(`Load failed  ${msg}`);
           }
         } else {
           trace('openB4xProject.autoLoad.disabled');
@@ -1965,49 +2604,90 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn('B4X: auto-load after workspace load failed', err);
-        openSteps.error(`Load failed — ${msg}`);
+        openSteps.error(`Load failed  ${msg}`);
       }
-      
-      // Refresh the Projects tree view now that the project is opened and assets are loaded
-      try {
-        await vscode.commands.executeCommand('b4xIntellisense.refreshCommandsView');
-      } catch { /* ignore */ }
       }); // end withProgress
 
       // Ensure the status bar shows a final Ready state after the open flow
       // completes only when we are not expecting LSP indexing to run.
       try {
         if (!lspIndexingExpected) {
-          statusBarItem.text = '$(check) B4X: Ready';
-          statusBarItem.tooltip = 'B4X IntelliSense — Ready';
+          openSteps.done('Ready');
           statusBarItem.show();
-          try {
-            await context.globalState.update(GLOBAL_STATE_LAST_STATUS, {
-              text: statusBarItem.text,
-              tooltip: statusBarItem.tooltip,
-              step: 10,
-              total: 10,
-              gen: statusBarGeneration,
-              ready: true,
-            });
-          } catch { /* best-effort persistence */ }
         }
+        try {
+          void vscode.commands.executeCommand('b4xIntellisense.refreshCommandsView');
+        } catch { /* ignore */ }
       } catch { /* best-effort UI update */ }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('B4X: openB4xProject failed', err);
-      openSteps.error(`Failed — ${msg}`);
+      openSteps.error(`Failed  ${msg}`);
     }
+    }),
+
+    // Package additional libraries for client hand-off
+    vscode.commands.registerCommand('b4xIntellisense.packageLibraries', async () => {
+      try {
+        const result = await distributeAdditionalLibraries(
+          currentProjectDirectory,
+          currentProjectFilePath,
+          currentAllowedLibraries,
+          currentInternalLibrariesFolder,
+          currentAdditionalLibrariesFolder,
+          (libName: string) => {
+            const entry = libraryCatalog.getEntry(libName);
+            if (!entry) return undefined;
+            return { name: entry.name, forumThread: entry.forum_thread, version: entry.version };
+          },
+        );
+        if (!result) return;
+        const { zipPath, included, missing } = result;
+
+        const licenseOk = await vscode.window.showWarningMessage(
+          'This archive may contain third-party libraries that are not licensed for redistribution. You are responsible for ensuring compliance with all applicable licenses before sharing the generated package.',
+          { modal: true },
+          'I confirm',
+        );
+        if (licenseOk !== 'I confirm') {
+          return;
+        }
+
+        const msg = `Created ${path.basename(zipPath)} with ${included.length} file(s)`;
+        const openAction = 'Open Folder';
+        const choice = await vscode.window.showInformationMessage(msg, openAction);
+        if (choice === openAction && currentProjectDirectory) {
+          try {
+            await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(zipPath));
+          } catch { /* ignore */ }
+        }
+        if (missing.length > 0) {
+          void vscode.window.showWarningMessage(
+            `B4X: ${missing.length} library(s) were not found in the Additional Libraries folder: ${missing.join(', ')}`,
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        void vscode.window.showErrorMessage(`B4X: Failed to package libraries  ${message}`);
+      }
     }),
 
     // Library DB: refresh/inspect/clear commands
     vscode.commands.registerCommand('b4xIntellisense.refreshLibraryIndex', async () => {
+      const prev = statusBarItem?.text ?? '$(symbol-misc) B4X';
       try {
+        statusBarItem.text = '$(sync~spin) B4X: Refreshing library index...';
+        statusBarItem.tooltip = 'B4X IntelliSense  Refreshing library index';
+        statusBarItem.show();
+        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
         if (currentProjectDirectory) libraryIndex.touchProject(currentProjectDirectory);
         await workspaceClasses.refresh(currentAllowedModuleBasePaths);
+        statusBarItem.text = '$(check) B4X: Ready';
+        statusBarItem.tooltip = 'B4X IntelliSense  Ready';
+        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
         void vscode.window.showInformationMessage('B4X: Library index refreshed');
       } catch (err) {
-        console.error('refreshLibraryIndex failed', err);
+        statusBarItem.text = prev;
+        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
         void vscode.window.showErrorMessage('Failed to refresh library index');
       }
     }),
@@ -2021,15 +2701,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         void vscode.window.showInformationMessage(`B4X: Library DB path: ${dbPath}`);
         try { await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(dbPath)); } catch { /* ignore */ }
       } catch (err) {
-        console.error('showLibraryDbPath failed', err);
         void vscode.window.showErrorMessage('Failed to show library DB path');
       }
     }),
     vscode.commands.registerCommand('b4xIntellisense.clearLibraryCache', async () => {
+      const prev = statusBarItem?.text ?? '$(symbol-misc) B4X';
       try {
+        statusBarItem.text = '$(sync~spin) B4X: Clearing library cache...';
+        statusBarItem.tooltip = 'B4X IntelliSense  Clearing library cache';
+        statusBarItem.show();
+        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
         const storageBase = context.globalStorageUri?.fsPath;
         if (!storageBase) {
           void vscode.window.showErrorMessage('Extension storage path not available');
+          statusBarItem.text = prev;
+          try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
           return;
         }
         const dbPath = libraryIndex.getDbPath() || path.join(storageBase, 'library-index.sqlite');
@@ -2038,30 +2724,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         try { await fs.promises.unlink(dbPath).catch(() => {}); } catch { /* ignore */ }
         try { await fs.promises.rm(cacheDir, { recursive: true, force: true }).catch(() => {}); } catch { /* ignore */ }
         libraryIndex.init(storageBase);
+        statusBarItem.text = '$(check) B4X: Ready';
+        statusBarItem.tooltip = 'B4X IntelliSense  Ready';
+        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
         void vscode.window.showInformationMessage('B4X: Library cache cleared');
       } catch (err) {
         console.error('clearLibraryCache failed', err);
+        statusBarItem.text = prev;
+        try { void extContext?.globalState.update(GLOBAL_STATE_LAST_STATUS, { text: statusBarItem.text, tooltip: statusBarItem.tooltip }); } catch {}
         void vscode.window.showErrorMessage('Failed to clear library cache');
       }
     }),
-    // Helper test command: simulate opening a B4X project by entering a path (bypasses file-picker)
-    vscode.commands.registerCommand('b4xIntellisense.simulateOpen', async () => {
-      try {
-        const input = await vscode.window.showInputBox({ prompt: 'Enter path to B4X project file to simulate open (full path)' });
-        if (!input) return;
-        const filePath = path.resolve(input);
-        if (!fs.existsSync(filePath)) {
-          void vscode.window.showErrorMessage(`File not found: ${filePath}`);
-          return;
-        }
-        const uri = vscode.Uri.file(filePath);
-        // Invoke the real command handler with the URI to bypass the open dialog.
-        await vscode.commands.executeCommand('b4xIntellisense.openB4xProject', uri);
-      } catch (err) {
-        console.error('B4X: simulateOpen failed', err);
-      }
-    }),
-    
+
     // Create a new B4X project from a template file (.b4xtemplate)
     vscode.commands.registerCommand('b4xIntellisense.newB4xProjectFromTemplate', async () => {
       await createNewB4xProjectFromTemplate(context);
@@ -2072,10 +2746,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const keys = context.globalState.keys();
         const sysIni = context.globalState.get(GLOBAL_STATE_SYSTEM_INI);
         const last = context.globalState.get(GLOBAL_STATE_LAST_PROJECT_FILE);
-        console.log('B4X: debugState -> globalState keys=', keys);
-        console.log('B4X: debugState -> b4x.systemIni=', sysIni);
-        console.log('B4X: debugState -> b4x.lastOpenedProjectFile=', last);
-        void vscode.window.showInformationMessage(`B4X: globalState keys: ${keys.join(', ')}`);
+        const libCatalogTimestamp = context.globalState.get<number>('b4x.libraryCatalog.timestamp');
+        const libCatalogEtag = context.globalState.get<string>('b4x.libraryCatalog.etag');
+
+        let timestampInfo = 'Never fetched';
+        if (libCatalogTimestamp) {
+          const date = new Date(libCatalogTimestamp);
+          timestampInfo = `Last fetched: ${date.toLocaleString()} (${Math.floor((Date.now() - libCatalogTimestamp) / 60000)} minutes ago)`;
+        }
+
+        void vscode.window.showInformationMessage(
+          `Library Catalog:\n${timestampInfo}\n\nETag: ${libCatalogEtag?.substring(0, 16) || 'N/A'}...`,
+        );
       } catch (err) {
         console.error('B4X: debugState failed', err);
       }
@@ -2087,7 +2769,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const xmlCount = xmlLibraries.findClassesByPrefix('').length;
         const libCount = currentAllowedLibraries?.size ?? 0;
         const modCount = currentAllowedModuleBasePaths?.size ?? 0;
-        console.log(`B4X: store counts -> workspace=${workspaceCount}, xml=${xmlCount}, allowedLibs=${libCount}, allowedMods=${modCount}`);
         const projectNote = currentProjectDirectory
           ? ` | project: ${path.basename(currentProjectDirectory)}`
           : ' | no project loaded';
@@ -2095,7 +2776,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           `B4X: workspace=${workspaceCount}, xml=${xmlCount}, allowedLibs=${libCount}, allowedMods=${modCount}${projectNote}`,
         );
       } catch (err) {
-        console.error('B4X: printStores failed', err);
+        // printStores failed - silently continue
       }
     }),
     // Diagnostic command: dump intellisense diagnostics to a JSON file in workspace root
@@ -2109,9 +2790,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         const projectRoot = folders[0]!.uri.fsPath;
         const outPath = path.join(projectRoot, 'b4x-intellisense-diagnostics.json');
-        console.log(`B4X: dumpDiagnostics -> projectRoot=${projectRoot} outPath=${outPath}`);
 
-        // All data comes from in-memory intellisense state — the .b4a was already
+        // All data comes from in-memory intellisense state  the .b4a was already
         // parsed when the project was opened and these variables were populated then.
         // The last-opened project is persisted in `globalState` (survives host restarts).
         const activeProjectFile = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_FILE) || null;
@@ -2151,17 +2831,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         const report = {
           generated: new Date().toISOString(),
-          // ── Active project ────────────────────────────────────────────────
+          // -- Active project ------------------------------------------------
           activeProjectFile,
           activeProjectDirectory,
           lspActive: lspClientDisposable != null,
-          // ── Allow-lists parsed from .b4a during project open ──────────────
+          // -- Allow-lists parsed from .b4a during project open --------------
           allowedLibraries,
           allowedModules,
-          // ── Resolution: allowed → what actually got loaded ────────────────
+          // -- Resolution: allowed ? what actually got loaded ----------------
           libraryResolution,
           moduleResolution,
-          // ── IntelliSense store contents ───────────────────────────────────
+          // -- IntelliSense store contents -----------------------------------
           stores: {
             xmlClassCount,
             workspaceClassCount,
@@ -2176,13 +2856,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         try {
           await fs.promises.writeFile(outPath, JSON.stringify(report, null, 2), 'utf8');
-          console.log(`B4X: dumpDiagnostics -> wrote diagnostics to ${outPath}`);
+          void vscode.window.showInformationMessage(`B4X: diagnostics written to ${outPath}`);
         } catch (writeErr) {
-          console.error('B4X: dumpDiagnostics write error', writeErr);
           throw writeErr;
         }
 
-        // Do not await the user-facing message — return immediately so callers
+        // Do not await the user-facing message  return immediately so callers
         // (tests) don't hang waiting for a user interaction. If the user clicks
         // the action, open the diagnostics file asynchronously.
         void vscode.window
@@ -2193,13 +2872,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 const doc = await vscode.workspace.openTextDocument(outPath);
                 await vscode.window.showTextDocument(doc, { preview: false });
               } catch (openErr) {
-                console.error('B4X: open diagnostics file failed', openErr);
                 void vscode.window.showErrorMessage('Failed to open diagnostics file.');
               }
             }
           });
       } catch (err) {
-        console.error('B4X: dumpDiagnostics failed', err);
+        // dumpDiagnostics failed - silently continue
         void vscode.window.showErrorMessage('B4X: Failed to write diagnostics. See console for details.');
       }
     }),
@@ -2234,8 +2912,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await vscode.commands.executeCommand('b4xIntellisense.dumpDiagnostics');
         await vscode.commands.executeCommand('b4xIntellisense.openDiagnostics');
       } catch (err) {
-        console.error('B4X: runDiagnostics failed', err);
-        void vscode.window.showErrorMessage('Failed to run diagnostics. See console for details.');
+        void vscode.window.showErrorMessage('Failed to run diagnostics.');
       }
     }),
     // B4X Intellisense context submenu commands
@@ -2253,7 +2930,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (!editor) return;
       const document = editor.document;
       if (document.languageId !== 'b4x') return;
-      // Step 1: Un-format first — strip all leading indentation
+      // Step 1: Un-format first  strip all leading indentation
       const lines = document.getText().split(/\r?\n/);
       const unformatted = lines.map(l => l.trimStart());
       const unformattedText = unformatted.join('\n');
@@ -2539,6 +3216,59 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await vscode.workspace.applyEdit(edit);
       await vscode.commands.executeCommand('editor.action.formatDocument');
     }),
+    // Open the active B4X project file in its respective IDE using the OS default application.
+    // On Windows this uses the file association (e.g. .b4a ? B4A) just like double-clicking.
+    vscode.commands.registerCommand('b4xIntellisense.openPlatform', async (uri?: vscode.Uri) => {
+      try {
+        let projectFilePath = '';
+
+        // 1. If invoked with a URI (e.g. explorer right-click), use it directly.
+        if (uri) {
+          projectFilePath = uri.fsPath;
+        }
+
+        // 2. Otherwise try the last opened project file.
+        if (!projectFilePath) {
+          const lastOpenedPath = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_FILE, '');
+          if (lastOpenedPath && fs.existsSync(lastOpenedPath)) {
+            projectFilePath = lastOpenedPath;
+          }
+        }
+
+        // 3. Otherwise try the active editor if it's a B4X project file.
+        if (!projectFilePath) {
+          const activeDoc = vscode.window.activeTextEditor?.document;
+          if (activeDoc) {
+            const activePath = activeDoc.uri.fsPath;
+            const ext = path.extname(activePath).toLowerCase();
+            if (ext === '.b4a' || ext === '.b4i' || ext === '.b4j' || ext === '.b4r') {
+              projectFilePath = activePath;
+            }
+          }
+        }
+
+        // 4. Finally prompt the user to pick a project file.
+        if (!projectFilePath) {
+          const picked = await promptForB4xProjectFile();
+          if (!picked) { return; }
+          projectFilePath = picked.fsPath;
+        }
+
+        if (!fs.existsSync(projectFilePath)) {
+          void vscode.window.showErrorMessage(`Project file not found: ${projectFilePath}`);
+          return;
+        }
+
+        const platform = detectPlatformFromPath(projectFilePath);
+        const platformName = platform ? platform.toUpperCase() : 'B4X';
+
+        await vscode.env.openExternal(vscode.Uri.file(projectFilePath));
+        void vscode.window.showInformationMessage(`Opening ${path.basename(projectFilePath)} in ${platformName}...`);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage('Failed to open project in B4X IDE: ' + errorMessage);
+      }
+    }),
     // Run installer script for the active workspace using configured B4A install path
     vscode.commands.registerCommand('b4xIntellisense.installProject', async () => {
       try {
@@ -2636,6 +3366,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
         // Resolve adb path only for platforms that need it (B4A)
         let adbPath = '';
+        if (platformKey.toUpperCase() === 'B4A') {
+          adbPath = await resolveAdbPath(context);
+        }
         // Resolve java path for B4J execution if needed
         let javaPathArg = '';
         if (platformKey.toUpperCase() === 'B4J') {
@@ -2751,8 +3484,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // Open extension settings in Settings editor filtered to our extension
     vscode.commands.registerCommand('b4xIntellisense.openSettings', async () => {
       try {
-        // Open Settings UI filtered to the extension's configuration section
-        await vscode.commands.executeCommand('workbench.action.openSettings', 'b4xIntellisense');
+        SettingsWebviewPanel.createOrShow(context.extensionUri);
       } catch (err) {
         console.error('B4X: failed to open extension settings', err);
         void vscode.window.showErrorMessage('Failed to open B4X extension settings.');
@@ -2812,72 +3544,198 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         console.error('importThemeFromInstall failed', err);
       }
     }),
-    // Open bundled documentation (README.md or User Manual)
+    // Open bundled documentation (README.md or User Manual) in the built-in markdown preview
     vscode.commands.registerCommand('b4xIntellisense.openDocs', async () => {
       try {
         const choice = await vscode.window.showQuickPick(['User Manual', 'README'], { placeHolder: 'Open documentation' });
         if (!choice) return;
         const fileName = choice === 'User Manual' ? 'docs/manual.md' : 'README.md';
-        const docPath = path.join(context.extensionPath, fileName);
-        const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(docPath));
-        await vscode.window.showTextDocument(doc, { preview: false });
+        const docUri = vscode.Uri.file(path.join(context.extensionPath, fileName));
+        await vscode.commands.executeCommand('markdown.showPreview', docUri);
       } catch (err) {
         void vscode.window.showErrorMessage('Unable to open B4X IntelliSense documentation.');
         console.error('openDocs failed', err);
       }
     }),
+    vscode.commands.registerCommand('b4xIntellisense.focusDashboard', async () => {
+      try {
+        // Open the secondary sidebar and activate the B4X Companion container specifically.
+        // Using the container command instead of workbench.action.focusAuxiliaryBar ensures
+        // our dashboard is shown (not a different view like the chat).
+        await vscode.commands.executeCommand('workbench.view.extension.b4x-companion-dashboard-container');
+        // Focus the Project Resources webview view within the container.
+        await vscode.commands.executeCommand('b4x-companion-dashboard.focus');
+        // Programmatic reveal as a fallback for secondary sidebar webview rendering issues.
+        dashboardProvider.show();
+      } catch (err: any) {
+        vscode.window.showErrorMessage('Failed to open Project Resources dashboard. ' + err.message);
+        console.error('focusDashboard failed', err);
+      }
+    }),
     // Open the B4X website in a workspace webview (falls back to external browser)
     vscode.commands.registerCommand('b4xIntellisense.openB4x', async () => {
       try {
-        const panel = vscode.window.createWebviewPanel(
-          'b4xWebsite',
-          'B4X Website',
-          vscode.ViewColumn.One,
-          {
-            enableScripts: true,
-            retainContextWhenHidden: true,
-          },
-        );
-        // Ensure the panel is disposed when closed or on extension deactivation
-        panel.onDidDispose(() => { /* cleanup */ });
-        context.subscriptions.push(panel);
-
-        panel.webview.html = `<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src https:; script-src 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline';">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>html,body,iframe{height:100%;width:100%;margin:0;padding:0;border:0} .note{padding:8px;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}</style>
-  </head>
-  <body>
-    <iframe id="site" src="https://www.b4x.com/" title="B4X website" sandbox="allow-forms allow-scripts allow-same-origin allow-popups"></iframe>
-    <div class="note">If the site prevents embedding, <a id="openExt" href="#">open in external browser</a>.</div>
-    <script>
-      const vscode = acquireVsCodeApi();
-      document.getElementById('openExt').addEventListener('click', (e) => {
-        e.preventDefault();
-        vscode.postMessage({ command: 'openExternal' });
-      });
-    </script>
-  </body>
-</html>`;
-
-        panel.webview.onDidReceiveMessage(async (msg) => {
-          if (msg?.command === 'openExternal') {
-            try {
-              await vscode.env.openExternal(vscode.Uri.parse('https://www.b4x.com/'));
-            } catch (err) {
-              console.error('Failed to open external URL', err);
-            }
-          }
-        });
+        await vscode.env.openExternal(vscode.Uri.parse('https://www.b4x.com/'));
       } catch (err) {
-        void vscode.window.showErrorMessage('Unable to open B4X website.');
-        console.error('openB4X failed', err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage('Failed to open B4X website: ' + errorMessage);
       }
     }),
-    // Backup active workspace platform folders (runs bundled PowerShell script with confirmation)
+    // Launch an Ollama model via `ollama launch claude --model <model>`
+    vscode.commands.registerCommand('b4xIntellisense.ollamaLaunchClaude', async () => {
+      try {
+        if (!(await isOllamaRunning())) {
+          void vscode.window.showErrorMessage('Ollama is not running. Please start Ollama first.');
+          return;
+        }
+
+        if (!(await ensureCliToolInstalled(CLI_TOOLS.claude))) {
+          return;
+        }
+
+        const lastModel = context.workspaceState.get<string>('b4xIntellisense.ollamaClaudeModel');
+        const modelId = await promptForOllamaModel(lastModel);
+        if (!modelId) return;
+
+        if (ollamaClaudeStatusBar) {
+          ollamaClaudeStatusBar.text = `$(sparkle) Ollama Claude: ${modelId}`;
+          ollamaClaudeStatusBar.tooltip = `Ollama Claude Model: ${modelId} (Click to change)`;
+        }
+        await context.workspaceState.update('b4xIntellisense.ollamaClaudeModel', modelId);
+
+        const term = vscode.window.createTerminal({ name: `Ollama Claude: ${modelId}` });
+        term.show(true);
+        term.sendText(`ollama launch claude --model ${modelId}`, true);
+
+        ollamaProvider.refreshModels();
+
+        void vscode.window.showInformationMessage(
+          `Ollama model "${modelId}" launched for Claude. Select it from the Copilot chat model picker to use it.`,
+        );
+      } catch (err) {
+        void vscode.window.showErrorMessage('Failed to launch Ollama model for Claude.');
+        console.error('ollamaLaunchClaude failed', err);
+      }
+    }),
+    // Launch an Ollama model via `ollama launch copilot --model <model>`
+    vscode.commands.registerCommand('b4xIntellisense.ollamaLaunchCopilot', async () => {
+      try {
+        if (!(await isOllamaRunning())) {
+          void vscode.window.showErrorMessage('Ollama is not running. Please start Ollama first.');
+          return;
+        }
+
+        if (!(await ensureCliToolInstalled(CLI_TOOLS.copilot))) {
+          return;
+        }
+
+        const lastModel = context.workspaceState.get<string>('b4xIntellisense.ollamaCopilotModel') || 'kimi-k2.5:cloud';
+        const modelId = await promptForOllamaModel(lastModel, 'Copilot');
+        if (!modelId) return;
+
+        await context.workspaceState.update('b4xIntellisense.ollamaCopilotModel', modelId);
+
+        const term = vscode.window.createTerminal({ name: `Ollama Copilot: ${modelId}` });
+        term.show(true);
+        term.sendText(`ollama launch copilot --model ${modelId}`, true);
+
+        ollamaProvider.refreshModels();
+
+        void vscode.window.showInformationMessage(
+          `Ollama model "${modelId}" launched for Copilot. Select it from the Copilot chat model picker to use it.`,
+        );
+      } catch (err) {
+        void vscode.window.showErrorMessage('Failed to launch Ollama model for Copilot.');
+        console.error('ollamaLaunchCopilot failed', err);
+      }
+    }),
+    // Launch an Ollama model via `ollama launch opencode --model <model>`
+    vscode.commands.registerCommand('b4xIntellisense.ollamaLaunchOpenCode', async () => {
+      try {
+        if (!(await isOllamaRunning())) {
+          void vscode.window.showErrorMessage('Ollama is not running. Please start Ollama first.');
+          return;
+        }
+
+        if (!(await ensureCliToolInstalled(CLI_TOOLS.opencode))) {
+          return;
+        }
+
+        const lastModel = context.workspaceState.get<string>('b4xIntellisense.ollamaOpenCodeModel');
+        const modelId = await promptForOllamaModel(lastModel, 'OpenCode');
+        if (!modelId) return;
+
+        await context.workspaceState.update('b4xIntellisense.ollamaOpenCodeModel', modelId);
+
+        const term = vscode.window.createTerminal({ name: `Ollama OpenCode: ${modelId}` });
+        term.show(true);
+        term.sendText(`ollama launch opencode --model ${modelId}`, true);
+
+        ollamaProvider.refreshModels();
+
+        void vscode.window.showInformationMessage(
+          `Ollama model "${modelId}" launched for OpenCode.`,
+        );
+      } catch (err) {
+        void vscode.window.showErrorMessage('Failed to launch Ollama model for OpenCode.');
+        console.error('ollamaLaunchOpenCode failed', err);
+      }
+    }),
+    // Launch an Ollama model via `ollama launch codex --model <model>`
+    vscode.commands.registerCommand('b4xIntellisense.ollamaLaunchCodex', async () => {
+      try {
+        if (!(await isOllamaRunning())) {
+          void vscode.window.showErrorMessage('Ollama is not running. Please start Ollama first.');
+          return;
+        }
+
+        if (!(await ensureCliToolInstalled(CLI_TOOLS.codex))) {
+          return;
+        }
+
+        const lastModel = context.workspaceState.get<string>('b4xIntellisense.ollamaCodexModel');
+        const modelId = await promptForOllamaModel(lastModel, 'Codex');
+        if (!modelId) return;
+
+        await context.workspaceState.update('b4xIntellisense.ollamaCodexModel', modelId);
+
+        const term = vscode.window.createTerminal({ name: `Ollama Codex: ${modelId}` });
+        term.show(true);
+        term.sendText(`ollama launch codex --model ${modelId}`, true);
+
+        ollamaProvider.refreshModels();
+
+        void vscode.window.showInformationMessage(
+          `Ollama model "${modelId}" launched for Codex.`,
+        );
+      } catch (err) {
+        void vscode.window.showErrorMessage('Failed to launch Ollama model for Codex.');
+        console.error('ollamaLaunchCodex failed', err);
+      }
+    }),
+    // Launch a DeepSeek coding agent via `deepseek --provider ollama --model <model>`
+    vscode.commands.registerCommand('b4xIntellisense.deepseekLaunch', async () => {
+      try {
+        if (!(await isDeepSeekRunning())) {
+          void vscode.window.showErrorMessage('DeepSeek is not running. Please start DeepSeek first.');
+          return;
+        }
+
+        const modelId = await promptForDeepSeekModel();
+        if (!modelId) return;
+
+        const term = vscode.window.createTerminal({ name: `DeepSeek: ${modelId}` });
+        term.show(true);
+        term.sendText(`deepseek --provider ollama --model ${modelId}`, true);
+
+        void vscode.window.showInformationMessage(
+          `DeepSeek agent "${modelId}" launched in terminal.`,
+        );
+      } catch (err) {
+        void vscode.window.showErrorMessage('Failed to launch DeepSeek agent.');
+        console.error('deepseekLaunch failed', err);
+      }
+    }),
     vscode.commands.registerCommand('b4xIntellisense.backupWorkspace', async () => {
       try {
         const chosenFolder = await pickWorkspaceFolder('Select workspace for backup');
@@ -2951,7 +3809,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // Capture GIF from device using adb + ffmpeg (runs bundled PowerShell script)
       vscode.commands.registerCommand('b4xIntellisense.captureGif', async () => {
         try {
-          const name = await vscode.window.showInputBox({ placeHolder: 'Enter GIF name (no extension)', prompt: 'Name for the GIF file' });
+          const name = await vscode.window.showInputBox({
+            title: 'Capture GIF',
+            placeHolder: 'recording',
+            prompt: 'Name for the GIF file (no extension)',
+            value: 'recording',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+              const v = value.trim();
+              if (!v) return 'GIF name is required';
+              if (/[<>:"/\\|?*]/.test(v)) return 'GIF name cannot contain <>:"/\\|?* characters';
+              if (/\.(gif|png|jpg|mp4)$/i.test(v)) return 'Do not include a file extension  .gif is added automatically';
+              return null;
+            },
+          });
           if (!name) { return; }
 
           const chosenFolder = await pickWorkspaceFolder('Select workspace for GIF capture');
@@ -2975,7 +3846,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // Capture screenshots sequence using adb (runs bundled PowerShell script)
       vscode.commands.registerCommand('b4xIntellisense.captureScreenshots', async () => {
         try {
-          const prefix = await vscode.window.showInputBox({ placeHolder: 'Enter prefix for screenshots (e.g. page-)', prompt: 'Filename prefix' });
+          const prefix = await vscode.window.showInputBox({
+            title: 'Capture Screenshots',
+            placeHolder: 'page-',
+            prompt: 'Filename prefix',
+            value: 'page-',
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+              const v = value.trim();
+              if (!v) return 'Filename prefix is required';
+              if (/[<>:"/\\|?*]/.test(v)) return 'Prefix cannot contain <>:"/\\|?* characters';
+              return null;
+            },
+          });
           if (!prefix) { return; }
 
           const chosenFolder = await pickWorkspaceFolder('Select workspace for screenshots');
@@ -3008,26 +3891,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       selector,
       new B4xHoverProvider(workspaceClasses, xmlLibraries, primitiveTypes, commonClass, context),
     ),
-  );
-
-  try {
-    context.subscriptions.push(
-      vscode.languages.registerReferenceProvider(
-        selector,
-        new B4xReferenceProvider(workspaceClasses, xmlLibraries),
-      ),
-      // Register Folding Range provider
-      vscode.languages.registerFoldingRangeProvider(
-        selector,
-        new B4xFoldingRangeProvider(),
-      ),
-      // Register Auto-Close Keywords handler
-      registerAutoCloseKeywords(context),
-    );
-  } catch (err) {
-    console.error('B4X: Failed to register language providers', err);
-  }
-
+    // Register Find All References provider
+    vscode.languages.registerReferenceProvider(
+      selector,
+      new B4xReferenceProvider(workspaceClasses, xmlLibraries),
+    ),
+    // Register Folding Range provider
+    vscode.languages.registerFoldingRangeProvider(
+      selector,
+      new B4xFoldingRangeProvider(),
+    ),
+    // Register Auto-Close Keywords handler
+    registerAutoCloseKeywords(context),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (
         event.affectsConfiguration('b4xIntellisense.b4aIniPath')
@@ -3035,7 +3910,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         || event.affectsConfiguration('b4xIntellisense.b4jIniPath')
         || event.affectsConfiguration('b4xIntellisense.b4rIniPath')
       ) {
-        void reloadPlatformAssets();
+        const s = createStepTracker();
+        s.step('Applying INI settings...');
+        void reloadPlatformAssets({ applyIniOnly: true });
+        s.done('Ready');
       }
     }),
     
@@ -3046,7 +3924,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
 
       if (document.uri.fsPath.toLowerCase().endsWith('.b4a')) {
-        void reloadPlatformAssets();
+        const s = createStepTracker();
+        s.step('Reloading project assets...');
+        void reloadPlatformAssets({});
+        s.done('Ready');
       }
       // If a generated Main module was edited, sync changes back to the .b4a
       void syncGeneratedMainBack(document);
@@ -3074,7 +3955,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await vscode.commands.executeCommand('editor.action.indentLines');
     }),
 
-  context.subscriptions.push(
     // Extract Method: sends selected code to the LSP server for extraction.
     // Falls back to a basic client-side extraction when the server is unavailable.
     vscode.commands.registerCommand('b4xIntellisense.extractMethod', async () => {
@@ -3136,14 +4016,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             return;
           }
         }
-      } catch { /* LSP not available or returned no edits — fall through to client-side */ }
+      } catch { /* LSP not available or returned no edits  fall through to client-side */ }
 
       // Client-side fallback: wrap selection in a new Sub at end of document
       const selectedText = document.getText(selection);
       const lines = selectedText.split(/\r?\n/);
       const methodName = await vscode.window.showInputBox({
+        title: 'Extract Method',
         prompt: 'New method name',
         placeHolder: 'ExtractedMethod',
+        value: 'ExtractedMethod',
+        ignoreFocusOut: true,
         validateInput: (v) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(v) ? undefined : 'Must be a valid B4X identifier',
       });
       if (!methodName) return;
@@ -3177,9 +4060,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
       scheduleMemberSuggest(event.document);
     }),
-  );
-
-  context.subscriptions.push(
     vscode.window.onDidChangeTextEditorSelection((event) => {
       if (event.textEditor.document.languageId !== 'b4x') {
         return;
@@ -3206,13 +4086,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       '(',
       ',',
     ),
-  );
-
-  context.subscriptions.push(
     // Type diagnostics: warn when `Type` is declared outside Class_Globals / Process_Globals
+    registerCodeSmellDiagnostics(context),
     registerTypeDiagnostics(context),
     // CallSub validation: warn when CallSub references a non-existent Sub
     registerCallSubDiagnostics(context, workspaceClasses, xmlLibraries),
+    // Unused Sub diagnostics: warn when Subs have no references
+    registerUnusedSubDiagnostics(context, workspaceClasses, xmlLibraries),
+    // Unused library diagnostics: flag libraries whose types are not used
+    registerUnusedLibraryDiagnostics(context, workspaceClasses, xmlLibraries, () => currentAllowedLibraries),
+    // Compiler warning diagnostics: real-time B4X compiler warnings (warnings.txt engine)
+    registerWarningDiagnostics(context, () => {
+      const p = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_PLATFORM, 'b4a');
+      return (p as B4XPlatform) ?? 'b4a';
+    }),
     // Code actions: quick-fix to move Type blocks into Class_Globals/Process_Globals
     vscode.languages.registerCodeActionsProvider(selector, new TypeCodeActionProvider(), { providedCodeActionKinds: TypeCodeActionProvider.providedCodeActionKinds }),
     vscode.languages.registerCodeActionsProvider(selector, new ExtractMethodCodeActionProvider(), { providedCodeActionKinds: ExtractMethodCodeActionProvider.providedCodeActionKinds }),
@@ -3253,9 +4140,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       selector,
       new B4xDocumentHighlightProvider(),
     ),
-  );
-
-  context.subscriptions.push(
     // Document Links: clickable links for #AdditionalJar, LoadLayout, ShowPage
     vscode.languages.registerDocumentLinkProvider(
       selector,
@@ -3289,11 +4173,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       selector,
       new B4xInlineCompletionItemProvider(workspaceClasses, xmlLibraries),
     ),
-  );
-
-  // Semantic tokens: mark globals (from `Sub Class_Globals` and `Sub Process_Globals`) as `variable` with modifiers
-  // so themes can color them differently when used inside methods. Modifiers emitted: static, private, public, process
-  context.subscriptions.push(
+    // Semantic tokens: mark globals (from `Sub Class_Globals` and `Sub Process_Globals`) as `variable` with modifiers
+    // so themes can color them differently when used inside methods. Modifiers emitted: static, private, public, process
     ((): vscode.Disposable => {
       /** Find the position of the first B4X comment marker (') that is not inside a string. */
       function findCommentPosition(text: string): number {
@@ -3365,9 +4246,261 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })(),
   );
 
+  // Health check command  provides a quick diagnostic snapshot for users
+  // experiencing IntelliSense issues. Entirely additive; touches no existing code.
+  vscode.commands.registerCommand('b4xIntellisense.checkHealth', async () => {
+    // -- Collect structured health data --
+    type Status = 'ok' | 'warn' | 'error';
+    const rows: Array<{ section: string; label: string; value: string; status: Status; folder?: string }> = [];
+
+    // 1. Extension state
+    rows.push({ section: 'General', label: 'Extension', value: `v${context.extension.packageJSON?.version ?? 'unknown'}`, status: 'ok' });
+    rows.push({ section: 'General', label: 'Time', value: new Date().toLocaleString(), status: 'ok' });
+
+    // 2. LSP server
+    const lspRunning = lspClientDisposable !== undefined;
+    rows.push({ section: 'General', label: 'LSP Server', value: lspRunning ? 'Connected' : 'Not started', status: lspRunning ? 'ok' : 'error' });
+
+    // 3. Project
+    const lastProject = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_FILE);
+    if (lastProject && fs.existsSync(lastProject) && isFileInCurrentWorkspace(lastProject)) {
+      rows.push({ section: 'Project', label: 'Project File', value: path.basename(lastProject), status: 'ok' });
+    } else if (lastProject) {
+      rows.push({ section: 'Project', label: 'Project File', value: `Missing: ${lastProject}`, status: 'error' });
+    } else {
+      rows.push({ section: 'Project', label: 'Project File', value: 'None', status: 'warn' });
+    }
+    const projFiles = workspaceClasses?.workspaceFileCount ?? 0;
+    const projClasses = workspaceClasses?.workspaceClassCount ?? 0;
+    rows.push({ section: 'Project', label: 'Module Files', value: `${projFiles} indexed`, status: projFiles > 0 ? 'ok' : 'warn' });
+    rows.push({ section: 'Project', label: 'Module Classes', value: `${projClasses} available`, status: projClasses > 0 ? 'ok' : 'warn' });
+
+    // 4. Platform install path for the active project only
+    const cfg = vscode.workspace.getConfiguration('b4xIntellisense');
+    const activePlatformKey = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_PLATFORM, '');
+    if (activePlatformKey) {
+      const installSettingKey = `${activePlatformKey}InstallPath`;
+      const platformLabel = activePlatformKey.toUpperCase();
+      const installPath = cfg.get<string>(installSettingKey, '');
+      const exists = installPath && fs.existsSync(installPath);
+      rows.push({ section: 'Platform', label: `${platformLabel} Install Path`, value: installPath || 'Not configured', status: exists ? 'ok' : installPath ? 'error' : 'warn', folder: installPath || undefined });
+    } else {
+      rows.push({ section: 'Platform', label: 'Install Path', value: 'No project opened', status: 'warn' });
+    }
+
+    // 4b. Platform folder settings from INI for active project
+    const folderRow = (section: string, label: string, folder: string) => {
+      const exists = folder && fs.existsSync(folder);
+      rows.push({ section, label, value: folder || 'Not configured', status: exists ? 'ok' : folder ? 'error' : 'warn', folder: folder || undefined });
+    };
+    folderRow('Platform', 'Internal Libraries Folder', currentInternalLibrariesFolder);
+    folderRow('Platform', 'Additional Libraries Folder', currentAdditionalLibrariesFolder);
+    folderRow('Platform', 'Shared Modules Folder', currentSharedModulesFolder);
+
+    // Resolve Platform Tools folder (for B4A modern Android SDK uses platform-tools; tools/ is legacy)
+    let resolvedPlatformTools = '';
+    const configuredAdb = cfg.get<string>('adbPath', '').trim();
+    if (configuredAdb && fs.existsSync(configuredAdb)) {
+      resolvedPlatformTools = path.dirname(configuredAdb);
+    } else if (currentPlatformFolder && fs.existsSync(currentPlatformFolder)) {
+      const candidate = path.resolve(currentPlatformFolder, '..', '..', 'platform-tools');
+      if (fs.existsSync(candidate)) resolvedPlatformTools = candidate;
+    } else if (currentToolsFolder && fs.existsSync(currentToolsFolder)) {
+      const candidate = path.resolve(currentToolsFolder, '..', 'platform-tools');
+      if (fs.existsSync(candidate)) resolvedPlatformTools = candidate;
+    } else if (fs.existsSync('C:\\b4a\\sdk\\platform-tools')) {
+      resolvedPlatformTools = 'C:\\b4a\\sdk\\platform-tools';
+    }
+
+    if (activePlatformKey === 'b4a') {
+      if (resolvedPlatformTools) {
+        folderRow('Platform', 'Platform Tools Folder', resolvedPlatformTools);
+      } else {
+        folderRow('Platform', 'Tools Folder', currentToolsFolder);
+      }
+    } else {
+      folderRow('Platform', 'Tools Folder', currentToolsFolder);
+    }
+
+    folderRow('Platform', 'JavaBin', currentJavaBin);
+    folderRow('Platform', 'Platform Folder', currentPlatformFolder);
+    folderRow('Platform', 'New Project Default Folder', currentNewProjectDefaultFolder);
+
+    // 5. Internal libraries  XML and b4xlib from the Internal Libraries folder
+    const xmlFilePaths = xmlLibraries?.loadedFilePaths ?? [];
+    const xmlClassCount = xmlLibraries?.findClassesByPrefix('')?.length ?? 0;
+    const intLibFolder = currentInternalLibrariesFolder.toLowerCase();
+    const addLibFolder = currentAdditionalLibrariesFolder.toLowerCase();
+    const internalXmlCount = xmlFilePaths.filter(f => {
+      const fl = f.toLowerCase();
+      return intLibFolder && fl.startsWith(intLibFolder) && !(addLibFolder && fl.startsWith(addLibFolder));
+    }).length;
+    const additionalXmlCount = xmlFilePaths.length - internalXmlCount;
+    rows.push({ section: 'Internal Libraries', label: 'XML Files', value: `${internalXmlCount} loaded`, status: internalXmlCount > 0 ? 'ok' : 'warn' });
+    rows.push({ section: 'Internal Libraries', label: 'XML Classes', value: `${xmlClassCount} available`, status: xmlClassCount > 0 ? 'ok' : 'error' });
+
+    const b4xlibCount = lastLoadedB4xlibFiles?.length ?? 0;
+    const b4xlibModuleCount = lastB4xlibModuleCount;
+    const intB4xlibCount = lastLoadedB4xlibFiles.filter(f => {
+      const fl = f.toLowerCase();
+      return intLibFolder && fl.startsWith(intLibFolder) && !(addLibFolder && fl.startsWith(addLibFolder));
+    }).length;
+    const addB4xlibCount = b4xlibCount - intB4xlibCount;
+    rows.push({ section: 'Internal Libraries', label: 'B4XLib Files', value: `${intB4xlibCount} processed`, status: 'ok' });
+    rows.push({ section: 'Internal Libraries', label: 'B4XLib Modules', value: `${b4xlibModuleCount} extracted`, status: 'ok' });
+
+    // 6. Additional (external) libraries  from the Additional Libraries folder
+    if (additionalXmlCount > 0 || addB4xlibCount > 0) {
+      rows.push({ section: 'Additional Libraries', label: 'XML Files', value: `${additionalXmlCount} loaded`, status: 'ok' });
+      rows.push({ section: 'Additional Libraries', label: 'B4XLib Files', value: `${addB4xlibCount} processed`, status: 'ok' });
+    }
+
+    // 7. B4XLib-extracted modules (indexed separately from project modules)
+    const refFiles = workspaceClasses?.referenceFileCount ?? 0;
+    const refClasses = workspaceClasses?.referenceClassCount ?? 0;
+    rows.push({ section: 'Libraries', label: 'B4XLib Reference Modules', value: `${refFiles} indexed`, status: 'ok' });
+    rows.push({ section: 'Libraries', label: 'B4XLib Reference Classes', value: `${refClasses} available`, status: 'ok' });
+
+    // 8. Common class (bare-word globals from Core.xml)
+    const commonMembers = commonClass?.getMembers() ?? [];
+    const commonLoaded = commonClass?.isLoaded() ?? false;
+    rows.push({ section: 'Libraries', label: 'Common Class', value: commonLoaded ? `${commonMembers.length} members` : 'Missing', status: commonLoaded ? 'ok' : 'error' });
+
+    // 9. Active editor language
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+      rows.push({ section: 'Editor', label: 'Active Editor', value: `${activeEditor.document.languageId} (${path.basename(activeEditor.document.fileName)})`, status: 'ok' });
+    } else {
+      rows.push({ section: 'Editor', label: 'Active Editor', value: 'None', status: 'warn' });
+    }
+
+    // 10. Environment & Build Tools (Doctor)
+    const configuredB4aBuilder = cfg.get<string>('b4aBuilderPath', '').trim();
+    const configuredB4jBuilder = cfg.get<string>('b4jBuilderPath', '').trim();
+    const configuredB4aIni = cfg.get<string>('b4aIniPath', '').trim();
+
+    const doctorReport = runB4xDoctor({
+      javaHome: currentJavaBin,
+      b4aBuilderPath: configuredB4aBuilder || undefined,
+      b4jBuilderPath: configuredB4jBuilder || undefined,
+      adbPath: configuredAdb || undefined,
+      internalLibsFolder: currentInternalLibrariesFolder,
+      additionalLibsFolder: currentAdditionalLibrariesFolder,
+      platformFolder: currentPlatformFolder,
+      toolsFolder: resolvedPlatformTools || currentToolsFolder,
+      iniPath: configuredB4aIni || undefined,
+    });
+    for (const comp of doctorReport.components) {
+      const status: Status = comp.status === 'ok' ? 'ok' : comp.status === 'warning' ? 'warn' : 'error';
+      rows.push({
+        section: 'Environment & Tools (Doctor)',
+        label: comp.name,
+        value: comp.details ? `${comp.details}${comp.recommendation ? ' (' + comp.recommendation + ')' : ''}` : (comp.status === 'ok' ? 'Found' : 'Missing'),
+        status,
+        folder: comp.path || undefined,
+      });
+    }
+
+    // -- Render as a webview panel with a styled table --
+    const panel = vscode.window.createWebviewPanel(
+      'b4xHealthCheck',
+      'B4X IntelliSense Health',
+      vscode.ViewColumn.One,
+      { enableScripts: true },
+    );
+
+    const statusIcon = (s: Status) => s === 'ok' ? '?' : s === 'warn' ? '??' : '?';
+    const statusClass = (s: Status) => s === 'ok' ? 'ok' : s === 'warn' ? 'warn' : 'error';
+
+    // Group rows by section  folder paths become clickable links
+    const sections: string[] = [];
+    let currentSection = '';
+    for (const row of rows) {
+      if (row.section !== currentSection) {
+        currentSection = row.section;
+        sections.push(`<tr class="section-header"><td colspan="3">${currentSection}</td></tr>`);
+      }
+      const valueHtml = row.folder
+        ? `<a href="#" class="folder-link" data-folder="${encodeURIComponent(row.folder)}">${row.value}</a>`
+        : row.value;
+      sections.push(`<tr class="${statusClass(row.status)}"><td class="status">${statusIcon(row.status)}</td><td class="label">${row.label}</td><td class="value">${valueHtml}</td></tr>`);
+    }
+
+    // Plain-text version for clipboard
+    const plainLines = rows.map(r => `${r.label}: ${r.value}`);
+    const plainReport = `=== B4X IntelliSense Health ===\n${plainLines.join('\n')}\n=== End ===`;
+
+    panel.webview.html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B4X IntelliSense Health</title>
+<style>
+  :root { --bg: var(--vscode-editor-background); --fg: var(--vscode-editor-foreground); --border: var(--vscode-panel-border, #444); }
+  body { font-family: var(--vscode-font-family, 'Segoe UI', sans-serif); background: var(--bg); color: var(--fg); margin: 0; padding: 16px; }
+  h1 { font-size: 16px; margin: 0 0 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td { padding: 5px 10px; border-bottom: 1px solid var(--border); }
+  .section-header td { font-weight: 600; font-size: 13px; padding-top: 14px; border-bottom: 2px solid var(--border); color: var(--vscode-textLink-foreground, #3794ff); }
+  .status { width: 28px; text-align: center; font-size: 14px; }
+  .label { width: 40%; color: var(--vscode-descriptionForeground, #999); }
+  .value { word-break: break-all; }
+  .ok .value { color: var(--vscode-terminal-ansiGreen, #4ec9b0); }
+  .warn .value { color: var(--vscode-terminal-ansiYellow, #dcdcaa); }
+  .error .value { color: var(--vscode-terminal-ansiRed, #f44747); }
+  .folder-link { color: var(--vscode-textLink-foreground, #3794ff); text-decoration: underline; cursor: pointer; }
+  .folder-link:hover { color: var(--vscode-textLink-activeForeground, #4b94fd); }
+  .copy-btn { margin-top: 12px; padding: 6px 16px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--vscode-button-background, #0e639c); color: var(--vscode-button-foreground, #fff); border-radius: 3px; }
+  .copy-btn:hover { background: var(--vscode-button-hoverBackground, #1177bb); }
+</style>
+</head>
+<body>
+<h1>B4X IntelliSense Health</h1>
+<table>${sections.join('\n')}</table>
+<button class="copy-btn" id="copyBtn">?? Copy Report</button>
+<script>
+const vscodeApi = acquireVsCodeApi();
+document.getElementById('copyBtn').addEventListener('click', () => {
+  vscodeApi.postMessage({ command: 'copy' });
+});
+document.querySelectorAll('.folder-link').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    vscodeApi.postMessage({ command: 'openFolder', folder: el.getAttribute('data-folder') });
+  });
+});
+</script>
+</body>
+</html>`;
+
+    panel.webview.onDidReceiveMessage(
+      (msg: { command: string; folder?: string }) => {
+        if (msg.command === 'copy') {
+          void vscode.env.clipboard.writeText(plainReport);
+          void vscode.window.showInformationMessage('Health report copied to clipboard');
+        } else if (msg.command === 'openFolder' && msg.folder) {
+          const folderPath = decodeURIComponent(msg.folder);
+          // Use explorer.exe on Windows to open the folder directly;
+          // revealFileInOS only opens the parent and selects the target.
+          if (process.platform === 'win32') {
+            const { execFile } = require('child_process');
+            execFile('explorer', [folderPath]);
+          } else {
+            void vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(folderPath));
+          }
+        }
+      },
+      undefined,
+      context.subscriptions,
+    );
+  });
+
   // Pre-scan all platform library folders for .b4xtemplate files.
-  // Scanning runs asynchronously but callers can await templateScanComplete.
-  scanTemplates();
+  // Fire-and-forget so a slow/unreachable library folder can never wedge
+  // activation or leave the status bar stuck: scanTemplates() clears its
+  // own spinner, and unhandled rejections are swallowed here.
+  void scanTemplates().catch(() => {});
 
   // If the extension was restarted after an Open Project flow (for example
   // when `updateWorkspaceFolders` or `vscode.openFolder` caused a reload),
@@ -3376,18 +4509,89 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // bar continues to show numbered progress (1/10, 2/10...) during reload.
   if (hasOpenedProject) {
     void (async () => {
-      const activationSteps = createStepTracker(10);
+      const cfg = vscode.workspace.getConfiguration('b4xIntellisense');
+      const autoOpen = cfg.get<boolean>('autoOpenProjectFolderOnOpen', false);
+
+      const activationSteps = createStepTracker();
+      activationSteps.step('Reloading project assets...');
+
       try {
-        await reloadPlatformAssets({}, activationSteps);
-        void (async () => {
-          try {
-            await startB4XLanguageClient(context, activationSteps);
-          } catch {
-            statusBarItem.text = '$(check) B4X: Ready (No LSP)';
-            void context.globalState.update(GLOBAL_STATE_LAST_STATUS, statusBarItem.text);
+        // If autoOpen is enabled, we need to ensure the workspace folder matches
+        // the project's parent directory. Check if we need to replace the workspace.
+        if (autoOpen) {
+          const lastProjectFile = context.globalState.get<string>(GLOBAL_STATE_LAST_PROJECT_FILE);
+          if (lastProjectFile && fs.existsSync(lastProjectFile) && isFileInCurrentWorkspace(lastProjectFile)) {
+            const projectRoot = path.dirname(lastProjectFile);
+            const normalizedProjectRoot = path.resolve(projectRoot).toLowerCase();
+
+            const existingFolders = vscode.workspace.workspaceFolders ?? [];
+            const hasCorrectFolder = existingFolders.some(
+              (f) => path.resolve(f.uri.fsPath).toLowerCase() === normalizedProjectRoot
+            );
+
+            if (!hasCorrectFolder) {
+              // Workspace doesn't have the correct folder - open it to replace
+              trace('activation.autoOpenFolder', normalizedProjectRoot);
+              await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(projectRoot), false);
+              // Return here - the folder open will restart the extension host
+              return;
+            }
           }
-        })();
-        console.log('B4X: activation auto-reload completed for', context.globalState.get(GLOBAL_STATE_LAST_PROJECT_FILE));
+        }
+
+        // Either autoOpen is disabled, or workspace already has the correct folder
+        // Proceed with loading project assets
+        await reloadPlatformAssets({}, activationSteps);
+
+        // Start the LSP language server on auto-reload  without this the
+        // server-side features (diagnostics, rename, extract method, LSP-based
+        // go-to-definition) are completely unavailable after VS Code restart.
+        // This mirrors the startLanguageClient() call in the explicit
+        // openB4xProject command path (~line 2295).
+        try {
+          // Check workspace trust before starting the LSP server.
+          // The language server requires filesystem access and process spawning,
+          // which are only available in trusted workspaces.
+          if (vscode.workspace.isTrusted === false) {
+            console.warn('B4X: Skipping language server startup on auto-reload  workspace is not trusted.');
+            void vscode.window.showInformationMessage('B4X: Language server requires a trusted workspace. Trust this folder to enable full IntelliSense.');
+          } else {
+            if (lspClientDisposable) {
+              try { lspClientDisposable.dispose(); } catch { /* ignore */ }
+              lspClientDisposable = undefined;
+            }
+
+            activationSteps.step('Starting language server...');
+            statusBarItem.show();
+
+            const lspDisposable = await startLanguageClient(context, (method: string, params: any) => {
+              try {
+                if (method === 'b4x/indexing') {
+                  const phase = params && params.phase;
+                  if (phase === 'start') {
+                    const total = params.total || 0;
+                    try { statusBarItem.text = `$(sync~spin) B4X: Indexing workspace (0/${total})`; statusBarItem.tooltip = `Indexing workspace  0 of ${total} files`; } catch {}
+                  } else if (phase === 'progress') {
+                    const processed = params.processed || 0;
+                    const total = params.total || 0;
+                    try { statusBarItem.text = `$(sync~spin) B4X: Indexing workspace (${processed}/${total})`; statusBarItem.tooltip = `Indexing workspace  ${processed} of ${total} files`; } catch {}
+                  } else if (phase === 'done') {
+                    try { activationSteps.done('Ready'); } catch { /* best-effort */ }
+                  }
+                }
+              } catch { /* swallow notification handler errors */ }
+            }, { projectRoot: lastProjectFile ? path.dirname(lastProjectFile) : undefined });
+
+            if (lspDisposable) { context.subscriptions.push(lspDisposable); lspClientDisposable = lspDisposable; }
+            const indexedRoot = lastProjectFile ? path.dirname(lastProjectFile) : (vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? 'workspace');
+            void vscode.window.showInformationMessage(`B4X: Language server started  indexing ${indexedRoot}`);
+          }
+        } catch (lspErr) {
+          console.error('B4X: LSP client failed to start on auto-reload', lspErr);
+          void vscode.window.showWarningMessage('B4X: Language server failed to start on reload. Some features may be unavailable.');
+        }
+
+        activationSteps.done('Ready');
       } catch (err) {
         console.error('B4X: activation auto-reload failed', err);
         activationSteps.error('Reload failed');
@@ -3408,18 +4612,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
 
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'B4X: Reloading project...', cancellable: false }, async (progress) => {
-          const reloadSteps = createStepTracker(10);
+          const reloadSteps = createStepTracker();
           try {
             await reloadPlatformAssets({}, reloadSteps);
-            void (async () => {
-              try {
-                await startB4XLanguageClient(context, reloadSteps);
-                void vscode.window.showInformationMessage('B4X: Project reload complete');
-              } catch {
-                statusBarItem.text = '$(check) B4X: Ready (No LSP)';
-                void context.globalState.update(GLOBAL_STATE_LAST_STATUS, statusBarItem.text);
-              }
-            })();
+            reloadSteps.done('Ready');
+            void vscode.window.showInformationMessage('B4X: Project reload complete');
           } catch (err) {
             console.error('B4X: reloadProject failed', err);
             reloadSteps.error('Reload failed');
@@ -3441,7 +4638,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const b4xlibsCount = lastLoadedB4xlibFiles.length;
         const xmlCount = Array.isArray(Array.from(xmlLibraries.loadedFilePaths)) ? Array.from(xmlLibraries.loadedFilePaths).length : xmlLibraries.findClassesByPrefix('').length;
         const modulesCount = Array.isArray(Array.from(workspaceClasses.loadedFilePaths)) ? Array.from(workspaceClasses.loadedFilePaths).length : workspaceClasses.findClassesByPrefix('').length;
-        const message = `B4X — Templates: ${templatesCount} | b4xlibs: ${b4xlibsCount} | XML files: ${xmlCount} | Modules: ${modulesCount}`;
+        const message = `B4X  Templates: ${templatesCount} | b4xlibs: ${b4xlibsCount} | XML files: ${xmlCount} | Modules: ${modulesCount}`;
         void vscode.window.showInformationMessage(message);
       } catch (err) {
         console.error('B4X: showStatusSummary failed', err);
@@ -3454,6 +4651,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   try {
     statusBarItem.command = 'b4xIntellisense.showStatusSummary';
   } catch { /* best-effort */ }
+
+  // Status bar item for Ollama Claude model picker & launch
+  try {
+    const savedClaudeModel = context.workspaceState.get<string>('b4xIntellisense.ollamaClaudeModel');
+    ollamaClaudeStatusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 95);
+    ollamaClaudeStatusBar.name = 'Ollama Claude Model';
+    ollamaClaudeStatusBar.command = 'b4xIntellisense.ollamaLaunchClaude';
+    ollamaClaudeStatusBar.text = savedClaudeModel ? `$(sparkle) Ollama Claude: ${savedClaudeModel}` : '$(sparkle) Ollama Claude: Select Model';
+    ollamaClaudeStatusBar.tooltip = savedClaudeModel ? `Ollama Claude Model: ${savedClaudeModel} (Click to change)` : 'Click to select an Ollama model and launch with Claude';
+    ollamaClaudeStatusBar.show();
+    context.subscriptions.push(ollamaClaudeStatusBar);
+  } catch (err) {
+    console.error('Failed to initialize ollamaClaudeStatusBar', err);
+  }
 
   // Initialize and watch for build context changes (controls Build & Install command visibility)
   updateBuildCommandContext();
@@ -3469,6 +4680,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   try {
     const commandsProvider = new CommandsProvider(context);
     const treeView = vscode.window.createTreeView('b4xProjects', { treeDataProvider: commandsProvider });
+  // Initialize auto-backup service if enabled
+  setupAutoBackup(context);
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (
+        e.affectsConfiguration('b4xIntellisense.autoBackupEnabled') ||
+        e.affectsConfiguration('b4xIntellisense.autoBackupInterval')
+      ) {
+        setupAutoBackup(context);
+      }
+    })
+  );
+
     commandsProvider.bindView(treeView);
     context.subscriptions.push(treeView);
 
@@ -3476,9 +4700,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     context.subscriptions.push(vscode.commands.registerCommand('b4xIntellisense.refreshCommandsView', async () => {
       try { await commandsProvider.reload(); } catch { /* ignore */ }
     }));
-  } catch (err) {
-    console.error('B4X: Failed to register b4xProjects tree view', err);
-  }
+  } catch { /* best-effort */ }
 }
 
 function dedupePaths(filePaths: readonly string[]): string[] {
@@ -3572,6 +4794,8 @@ async function configureWorkspaceSettings(workspaceRoot: string, platform?: stri
         '**/Objects': true,
         '**/.b4a_cache': true,
       },
+      // Workspace display name (shows in title bar instead of folder name)
+      'workspace.name': path.basename(workspaceRoot),
     };
     
     // Deep merge the settings
@@ -3630,7 +4854,7 @@ async function determineWorkspaceRoot(
   const moduleFiles = config.allowedModuleFiles ?? [];
 
   if (moduleFiles.length === 0) {
-    // No modules resolved — fall back to the project base
+    // No modules resolved  fall back to the project base
     return projectBase;
   }
 
@@ -3716,8 +4940,66 @@ async function waitForWorkspaceFolderLoad(projectRootFsPath: string, timeoutMs =
   });
 }
 
+
+let autoBackupTimer: NodeJS.Timeout | undefined;
+
+function setupAutoBackup(context: vscode.ExtensionContext): void {
+  if (autoBackupTimer) {
+    clearInterval(autoBackupTimer);
+    autoBackupTimer = undefined;
+  }
+
+  const config = vscode.workspace.getConfiguration('b4xIntellisense');
+  const enabled = config.get<boolean>('autoBackupEnabled', false);
+  const interval = config.get<number>('autoBackupInterval', 600000);
+
+  if (!enabled || interval <= 0) {
+    return;
+  }
+
+  autoBackupTimer = setInterval(async () => {
+    try {
+      const folders = vscode.workspace.workspaceFolders;
+      if (!folders || folders.length === 0) return;
+
+      const scriptPath = context.asAbsolutePath(path.join('src', 'backup.ps1'));
+      if (!fs.existsSync(scriptPath)) return;
+
+      const runner = process.platform === 'win32' ? 'powershell.exe' : 'pwsh';
+
+      for (const folder of folders) {
+        const platformFolders = [
+          { name: 'B4A', path: path.join(folder.uri.fsPath, 'B4A') },
+          { name: 'B4i', path: path.join(folder.uri.fsPath, 'B4i') },
+          { name: 'B4J', path: path.join(folder.uri.fsPath, 'B4J') },
+          { name: 'B4R', path: path.join(folder.uri.fsPath, 'B4R') },
+        ].filter(pf => fs.existsSync(pf.path));
+
+        if (platformFolders.length === 0) continue;
+
+        const backupRoot = path.join(folder.uri.fsPath, '_backups');
+
+        for (const pf of platformFolders) {
+          const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-SourcePath', pf.path, '-BackupRoot', backupRoot];
+          const proc = cp.spawn(runner, args, { windowsHide: true });
+          proc.on('error', (err) => {
+            console.error('B4X: Auto-backup execution error for ' + pf.name, err);
+          });
+        }
+      }
+    } catch (err) {
+      console.error('B4X: Auto-backup failed', err);
+    }
+  }, interval);
+}
+
 export function deactivate(): void {
   try {
+    if (autoBackupTimer) {
+      clearInterval(autoBackupTimer);
+      autoBackupTimer = undefined;
+    }
+
     if (pendingSuggestRequest) {
       clearTimeout(pendingSuggestRequest);
       pendingSuggestRequest = undefined;
@@ -3733,7 +5015,16 @@ export function deactivate(): void {
   }
 }
 
-
+export function getExtensionFontCss(): string {
+  const cfg = vscode.workspace.getConfiguration('b4xIntellisense');
+  const fontFamily = cfg.get<string>('fontFamily', 'Fira Code Retina');
+  const fontSize = cfg.get<number>('fontSize', 12);
+  const wordWrap = cfg.get<boolean>('wordWrap', true);
+  const tabSize = cfg.get<number>('tabSize', 4);
+  const whiteSpace = wordWrap ? 'pre-wrap' : 'pre';
+  // Basic CSS snippet consumers (webviews) can include to honor user's extension settings.
+  return `body, code, pre { font-family: ${fontFamily}; font-size: ${fontSize}px; white-space: ${whiteSpace}; } .b4x-extension-editor { tab-size: ${tabSize}; -moz-tab-size: ${tabSize}; }`;
+}
 
 class B4xCompletionProvider implements vscode.CompletionItemProvider {
   public constructor(
@@ -3875,9 +5166,8 @@ class B4xHoverProvider implements vscode.HoverProvider {
     const hoveredWord = document.getText(wordRange);
     const classInfo = this.workspaceClasses.getDefinitionByName(hoveredWord)
       ?? this.xmlLibraries.getClassByName(hoveredWord);
-    // Diagnostic logging
     try {
-      console.log('B4X: hover -> hoveredWord=', hoveredWord, 'class=', Boolean(classInfo));
+      // Diagnostic logging disabled for production
     } catch {
       // ignore logging errors
     }
@@ -4298,7 +5588,7 @@ function getB4XLanguageKeywords(): vscode.CompletionItem[] {
     { label: 'CRLF', detail: 'Carriage return + line feed', doc: 'CRLF\n\nNew line character (Chr(10)).', kind: vscode.CompletionItemKind.Constant },
     { label: 'TAB', detail: 'Tab character', doc: 'TAB\n\nTab character constant.', kind: vscode.CompletionItemKind.Constant },
     { label: 'QUOTE', detail: 'Quote character', doc: 'QUOTE\n\nQuote character (Chr(34)).', kind: vscode.CompletionItemKind.Constant },
-    { label: 'cPI', detail: 'Pi constant', doc: 'cPI\n\nMathematical constant π (3.14159...).', kind: vscode.CompletionItemKind.Constant },
+    { label: 'cPI', detail: 'Pi constant', doc: 'cPI\n\nMathematical constant p (3.14159...).', kind: vscode.CompletionItemKind.Constant },
     { label: 'cE', detail: 'E constant', doc: 'cE\n\nNatural logarithm base e (2.71828...).', kind: vscode.CompletionItemKind.Constant },
     { label: 'True', detail: 'Boolean true', doc: 'True\n\nBoolean true value.', kind: vscode.CompletionItemKind.Constant },
     { label: 'False', detail: 'Boolean false', doc: 'False\n\nBoolean false value.', kind: vscode.CompletionItemKind.Constant },
@@ -4406,7 +5696,7 @@ function createGeneralCompletionItems(
     .findClassesByPrefix(normalizedPrefix)
     .map((item) => createClassCompletionItem(item));
 
-  // Common class global functions/fields — available as bare-word completions
+  // Common class global functions/fields  available as bare-word completions
   // Filter out Common members that have XML class definitions to avoid duplicates
   const xmlClassNamesForCommon = new Set(
     xmlLibraries.getAllClasses().map(c => c.name.toLowerCase())
@@ -4790,7 +6080,7 @@ function createCommonPropertyCompletion(member: import('./commonClassStore').Com
   return completion;
 }
 
-/** Build insert text for Common methods — inserts snippet with parameter placeholders. */
+/** Build insert text for Common methods  inserts snippet with parameter placeholders. */
 function createCommonMethodInsertText(member: import('./commonClassStore').CommonMemberInfo): vscode.SnippetString {
   const params = member.params ?? [];
   if (params.length === 0) {
@@ -5260,49 +6550,6 @@ function scheduleMemberSuggest(document: vscode.TextDocument): void {
  * from unrelated projects in the same directory.
  */
 async function applyExplorerFilter(projectFilePath: string, referencedFiles: string[]) {
-  try {
-    const projectRoot = getB4xProjectRoot(projectFilePath);
-    const referencedSet = new Set(referencedFiles.map(f => path.resolve(f).toLowerCase()));
-    referencedSet.add(path.resolve(projectFilePath).toLowerCase());
-
-    // Generate referenced main generated file path
-    const mainGenDir = path.join(path.dirname(projectFilePath), '.vscode', 'b4x-main');
-    // We don't necessarily know the exact name, but we can treat the whole .vscode folder as allowed
-    // or specifically the generated main file if we want to be strict.
-    // For now, let's keep it simple.
-
-    // find all B4X related files in the workspace (source and projects)
-    const b4xFiles = await vscode.workspace.findFiles('**/*.{bas,b4j,b4a,b4i,b4r}');
-    
-    const config = vscode.workspace.getConfiguration('files');
-    const existingExclude = config.get<Record<string, any>>('exclude', {});
-    
-    // We only want to manage exclusions for .bas and .b4* files to avoid
-    // disturbing user's other exclusions (like .git, node_modules, etc.)
-    const newExclude = { ...existingExclude };
-    
-    for (const fileUri of b4xFiles) {
-      const fullPath = path.resolve(fileUri.fsPath).toLowerCase();
-      const relative = vscode.workspace.asRelativePath(fileUri, false);
-      
-      if (!referencedSet.has(fullPath)) {
-        // This is a B4X source/project file but NOT in the active project.
-        // If it was previously un-excluded or missing, exclude it now.
-        newExclude[relative] = true;
-      } else {
-        // This IS in the project. Ensure it's NOT excluded.
-        // Setting to false explicitly removes any previous dynamic exclusion.
-        if (newExclude[relative] === true) {
-          delete newExclude[relative];
-        }
-      }
-    }
-
-    // Update the workspace setting. We use ConfigurationTarget.Workspace to anchor 
-    // it to the current project/folder session.
-    await config.update('exclude', newExclude, vscode.ConfigurationTarget.Workspace);
-    console.log(`[B4X DEBUG] applyExplorerFilter: Updated files.exclude with ${Object.keys(newExclude).length} entries`);
-  } catch (err) {
-    console.error('B4X: failed to apply explorer filter', err);
-  }
+  // Explorer filtering permanently disabled to keep all files visible in workspace
+  return;
 }

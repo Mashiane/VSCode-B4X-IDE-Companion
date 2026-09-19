@@ -72,7 +72,7 @@ class DocumentManager {
           const { symbols } = await workerPool.queueParse(uri, text);
 
           this.docs.set(uri, { text, symbols });
-          this.global.applyFileSymbols(symbols);
+          this.global.applyFileSymbols(symbols, filePath);
         } catch (e) {
           // skip unreadable files or parse errors
         }
@@ -111,15 +111,17 @@ class DocumentManager {
   }
 
   openDocument(uri, text) {
-    const symbols = parseFile(text, this._uriToPath(uri));
+    const filePath = this._uriToPath(uri);
+    const symbols = parseFile(text, filePath);
     this.docs.set(uri, { text, symbols });
-    this.global.applyFileSymbols(symbols);
+    this.global.applyFileSymbols(symbols, filePath);
   }
 
   changeDocument(uri, text) {
-    const symbols = parseFile(text, this._uriToPath(uri));
+    const filePath = this._uriToPath(uri);
+    const symbols = parseFile(text, filePath);
     this.docs.set(uri, { text, symbols });
-    this.global.applyFileSymbols(symbols);
+    this.global.applyFileSymbols(symbols, filePath);
   }
 
   closeDocument(uri) {
@@ -132,7 +134,7 @@ class DocumentManager {
     const entry = this.docs.get(uri);
     if (!entry) return; // only update documents that are actually open
     entry.symbols = symbols;
-    this.global.applyFileSymbols(symbols);
+    this.global.applyFileSymbols(symbols, this._uriToPath(uri));
   }
 
   async saveSnapshot(root) {

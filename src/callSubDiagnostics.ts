@@ -5,6 +5,7 @@
 
 import * as vscode from 'vscode';
 import { stripComment } from './b4xDocParser';
+import { WorkspaceClassStore, XmlLibraryStore } from './types';
 
 interface CallSubCall {
   moduleName: string;
@@ -38,7 +39,7 @@ export function provideCallSubDiagnosticsForDocument(
         `Sub '${call.subName}' not found in module '${call.moduleName}'. ${keyword} will fail at runtime.`,
         vscode.DiagnosticSeverity.Warning,
       );
-      diag.source = 'b4x-callsu';
+      diag.source = 'b4x-callsub';
       diagnostics.push(diag);
     }
   }
@@ -97,8 +98,8 @@ function extractCallSubCalls(document: vscode.TextDocument): CallSubCall[] {
  * Collect all Sub names defined in each module across the workspace.
  */
 export function collectWorkspaceSubs(
-  workspaceClasses: any,
-  xmlLibraries: any,
+  workspaceClasses: WorkspaceClassStore,
+  xmlLibraries: XmlLibraryStore,
 ): Map<string, Set<string>> {
   const subs = new Map<string, Set<string>>();
 
@@ -147,8 +148,8 @@ export function collectWorkspaceSubs(
 
 export function registerCallSubDiagnostics(
   context: vscode.ExtensionContext,
-  workspaceClasses: any,
-  xmlLibraries: any,
+  workspaceClasses: WorkspaceClassStore,
+  xmlLibraries: XmlLibraryStore,
 ): vscode.DiagnosticCollection {
   const collection = vscode.languages.createDiagnosticCollection('b4x-callsub');
   context.subscriptions.push(collection);

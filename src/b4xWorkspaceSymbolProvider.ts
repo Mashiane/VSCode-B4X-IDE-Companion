@@ -5,11 +5,12 @@
  */
 
 import * as vscode from 'vscode';
+import { WorkspaceClassStore, XmlLibraryStore } from './types';
 
 export class B4xWorkspaceSymbolProvider implements vscode.WorkspaceSymbolProvider {
   constructor(
-    private readonly workspaceClasses: any, // WorkspaceClassStore
-    private readonly xmlLibraries: any, // XmlLibraryStore
+    private readonly workspaceClasses: WorkspaceClassStore,
+    private readonly xmlLibraries: XmlLibraryStore,
   ) {}
 
   provideWorkspaceSymbols(

@@ -1,4 +1,4 @@
-export interface MisplacedTypeRange {
+﻿export interface MisplacedTypeRange {
   startLine: number;
   endLine: number;
 }
@@ -21,8 +21,7 @@ function stripB4xComment(line: string): string {
 
 export function findMisplacedTypeRanges(lines: string[]): MisplacedTypeRange[] {
   const results: MisplacedTypeRange[] = [];
-  let inClassGlobals = false;
-  let inProcessGlobals = false;
+  let inAllowedGlobals = false;
   let typeStart = 0;
   // Ignore any header/design metadata before the @EndOfDesignText@ marker
   let startIndex = 0;
@@ -35,29 +34,22 @@ export function findMisplacedTypeRanges(lines: string[]): MisplacedTypeRange[] {
     const code = stripB4xComment(raw).trim();
     if (!code) continue;
 
-    if (/^\s*Sub\s+Class_Globals\b/i.test(code)) {
-      inClassGlobals = true;
-      inProcessGlobals = false;
-      continue;
-    }
-
-    if (/^\s*Sub\s+Process_Globals\b/i.test(code)) {
-      inProcessGlobals = true;
-      inClassGlobals = false;
+    if (/^\s*Sub\s+(?:Class_Globals|Globals|Process_Globals)\b/i.test(code)) {
+      inAllowedGlobals = true;
       continue;
     }
 
     if (/^\s*End\s+Sub\b/i.test(code)) {
-      inClassGlobals = false;
-      inProcessGlobals = false;
+      inAllowedGlobals = false;
       continue;
     }
 
     if (/^\s*Type\b/i.test(code)) {
       typeStart = i;
-      // B4X `Type Name(...)` is a single-line declaration. If it's outside
-      // Class_Globals/Process_Globals, report the single-line as misplaced.
-      if (!inClassGlobals && !inProcessGlobals) {
+      // B4X `Type Name(...)` is a single-line declaration.
+      // In B4A / B4X, Type declarations are valid inside:
+      // Sub Class_Globals, Sub Globals, or Sub Process_Globals.
+      if (!inAllowedGlobals) {
         results.push({ startLine: typeStart, endLine: typeStart });
       }
       continue;

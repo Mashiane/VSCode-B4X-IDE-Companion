@@ -30,8 +30,14 @@ coverage/
 *.tmp
 *.temp
 
+# Git worktrees (isolated workspaces)
+.worktrees/
+
 # Archive of legacy code not used by the extension
 irrelevant/
+
+# Backup folder (development only, never distributed)
+LastWorkingVersion/
 
 # Indexer tests and CLI helpers (not required to build/install extension)
 server/indexer/tests/

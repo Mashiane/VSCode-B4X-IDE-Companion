@@ -2,21 +2,13 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 
-// Try to load the native `better-sqlite3`. If unavailable (CI/dev without
-// build tools), fall back to a lightweight sql.js (WASM) implementation that
-// persists to a file. If that also fails, fall back to the simple in-memory
-// shim used previously.
-let BetterSqlite3: any = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  BetterSqlite3 = require('better-sqlite3');
-} catch (err) {
-  BetterSqlite3 = null;
-}
+// sql.js (WASM SQLite) is the primary persistence backend, bundled via esbuild
+// with sql-wasm.wasm shipped alongside. If WASM is unavailable (blocked
+// environment), falls back to a simple in-memory shim with no persistence.
 
 // Minimal in-memory fallback DB implementing the tiny subset of the
-// better-sqlite3 API used by this module: `exec`, `prepare(sql).run/get/all`,
-// `transaction(fn)`, and `close()`.
+// sql.js / better-sqlite3 API used by this module: `exec`,
+// `prepare(sql).run/get/all`, `transaction(fn)`, and `close()`.
 class SimpleInMemoryDB {
   private tables: { files: any[]; projects: any[]; xml_classes: any[]; b4xlibs: any[]; b4xlib_inner: any[] };
   private idCounters: { files: number; projects: number; xml_classes: number; b4xlibs: number; b4xlib_inner: number };
@@ -34,7 +26,13 @@ class SimpleInMemoryDB {
     const s = this;
     const t = sql.trim().toUpperCase();
 
-    if (t.includes('FROM FILES')) {
+    // Order matters: check most specific patterns first to avoid substring collisions.
+    // Each branch matches a single, well-known SQL statement shape used by LibraryIndexSqlite.
+
+    // ── FILES table ──
+
+    // SELECT parsedBlob, mtime, size FROM files WHERE absPath = ?
+    if (t.startsWith('SELECT PARSEDBLOB') && t.includes('FROM FILES')) {
       return { get(key: any) {
         const abs = typeof key === 'object' && key.absPath ? key.absPath : key;
         const row = s.tables.files.find((r) => r.absPath === abs);
@@ -42,7 +40,8 @@ class SimpleInMemoryDB {
       } };
     }
 
-    if (t.startsWith('INSERT INTO FILES')) {
+    // INSERT OR REPLACE INTO files / INSERT INTO files
+    if (t.startsWith('INSERT OR REPLACE INTO FILES') || t.startsWith('INSERT INTO FILES')) {
       return { run(params: any) {
         const absPath = params.absPath || params[0];
         const mtime = params.mtime || params[1] || 0;
@@ -60,7 +59,23 @@ class SimpleInMemoryDB {
       } };
     }
 
-    if (t.includes('FROM XML_CLASSES')) {
+    // DELETE FROM files WHERE absPath = ?
+    if (t.startsWith('DELETE FROM FILES')) {
+      return { run(absPath: string) {
+        s.tables.files = s.tables.files.filter((r) => r.absPath !== absPath);
+        return { changes: 1 };
+      } };
+    }
+
+    // UPDATE files SET lastSeen = ? WHERE absPath = ?
+    if (t.startsWith('UPDATE FILES SET LASTSEEN')) {
+      return { run(now: number, absPath: string) { const row = s.tables.files.find((r) => r.absPath === absPath); if (row) row.lastSeen = now; return { changes: 1 }; } };
+    }
+
+    // ── XML_CLASSES table ──
+
+    // SELECT classBlob FROM xml_classes WHERE className = ?
+    if (t.startsWith('SELECT CLASSBLOB') && t.includes('FROM XML_CLASSES')) {
       return { get(name: any) {
         const key = typeof name === 'object' && name.className ? name.className : name;
         const row = s.tables.xml_classes.find((r) => r.className === key);
@@ -68,7 +83,8 @@ class SimpleInMemoryDB {
       } };
     }
 
-    if (t.includes('INSERT OR REPLACE INTO XML_CLASSES') || t.includes('INSERT INTO XML_CLASSES')) {
+    // INSERT OR REPLACE INTO xml_classes / INSERT INTO xml_classes
+    if (t.startsWith('INSERT OR REPLACE INTO XML_CLASSES') || t.startsWith('INSERT INTO XML_CLASSES')) {
       return { run(xmlPath: string, className: string, classBlob: string) {
         let existing = s.tables.xml_classes.find((r) => r.xmlPath === xmlPath && r.className === className);
         if (existing) existing.classBlob = classBlob;
@@ -77,6 +93,9 @@ class SimpleInMemoryDB {
       } };
     }
 
+    // ── B4XLIBS table ──
+
+    // INSERT INTO b4xlibs
     if (t.startsWith('INSERT INTO B4XLIBS')) {
       return { run(...args: any[]) {
         const archivePath = args[0]; const mtime = args[1] || 0; const extractedAt = args[2] || Date.now(); const extractedDir = args[3] || ''; const manifestBlob = args[4] || null;
@@ -87,15 +106,28 @@ class SimpleInMemoryDB {
       } };
     }
 
+    // SELECT id FROM b4xlibs WHERE archivePath = ?
     if (t.startsWith('SELECT ID FROM B4XLIBS')) {
       return { get(ap: string) { const lib = s.tables.b4xlibs.find((r) => r.archivePath === ap); return lib ? { id: lib.id } : undefined; } };
     }
 
-    if (t.includes('DELETE FROM B4XLIB_INNER')) {
+    // SELECT mtime, extractedDir, manifestBlob FROM b4xlibs WHERE archivePath = ?
+    if (t.startsWith('SELECT MTIME') && t.includes('FROM B4XLIBS')) {
+      return { get(ap: string) {
+        const lib = s.tables.b4xlibs.find((r) => r.archivePath === ap);
+        return lib ? { mtime: lib.mtime, extractedDir: lib.extractedDir, manifestBlob: lib.manifestBlob } : undefined;
+      } };
+    }
+
+    // ── B4XLIB_INNER table ──
+
+    // DELETE FROM b4xlib_inner WHERE b4xlib_id = ?
+    if (t.startsWith('DELETE FROM B4XLIB_INNER')) {
       return { run(id: number) { s.tables.b4xlib_inner = s.tables.b4xlib_inner.filter((r) => r.b4xlib_id !== id); return { changes: 1 }; } };
     }
 
-    if (t.includes('INSERT INTO B4XLIB_INNER')) {
+    // INSERT INTO b4xlib_inner
+    if (t.startsWith('INSERT INTO B4XLIB_INNER')) {
       return { run(b4xlib_id: number, relPath: string, absPath: string, mtime: number, size: number) {
         const existing = s.tables.b4xlib_inner.find((r) => r.absPath === absPath);
         if (!existing) s.tables.b4xlib_inner.push({ id: s.idCounters.b4xlib_inner++, b4xlib_id, relPath, absPath, mtime, size });
@@ -103,13 +135,12 @@ class SimpleInMemoryDB {
       } };
     }
 
+    // SELECT relPath, absPath, mtime, size FROM b4xlib_inner WHERE b4xlib_id = ?
     if (t.includes('FROM B4XLIB_INNER')) {
       return { all(libId: number) { return s.tables.b4xlib_inner.filter((r) => r.b4xlib_id === libId).map((r) => ({ relPath: r.relPath, absPath: r.absPath, mtime: r.mtime, size: r.size })); } };
     }
 
-    if (t.startsWith('UPDATE FILES SET LASTSEEN')) {
-      return { run(now: number, absPath: string) { const row = s.tables.files.find((r) => r.absPath === absPath); if (row) row.lastSeen = now; return { changes: 1 }; } };
-    }
+    // ── PROJECTS table ──
 
     if (t.startsWith('INSERT INTO PROJECTS')) {
       return { run(root: string, lastAccessed: number, lastAccessed2?: number) { let existing = s.tables.projects.find((r) => r.root === root); if (existing) existing.lastAccessed = lastAccessed2 || lastAccessed; else s.tables.projects.push({ id: s.idCounters.projects++, root, lastAccessed }); return { changes: 1 }; } };
@@ -158,100 +189,95 @@ class LibraryIndex {
     } catch { /* ignore */ }
     const dbPath = path.join(base, 'library-index.sqlite');
     this.dbPath = dbPath;
-    if (BetterSqlite3) {
-      this.db = new BetterSqlite3(dbPath, { fileMustExist: false });
-      this.ensureSchema();
-    } else {
-      // Try sql.js (WASM) as a persistent fallback. sql.js is async to initialize.
+
+    // sql.js (WASM SQLite) — primary persistence backend
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const initSqlJs = require('sql.js');
+      const SQL = await initSqlJs();
+      let fileData: Uint8Array | undefined;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const initSqlJs = require('sql.js');
-        const SQL = await initSqlJs();
-        let fileData: Uint8Array | undefined;
-        try {
-          if (fs.existsSync(dbPath)) {
-            const buf = fs.readFileSync(dbPath);
-            fileData = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-          }
-        } catch { fileData = undefined; }
+        if (fs.existsSync(dbPath)) {
+          const buf = fs.readFileSync(dbPath);
+          fileData = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+        }
+      } catch { fileData = undefined; }
 
-        const sqljsDB = fileData ? new SQL.Database(fileData) : new SQL.Database();
+      const sqljsDB = fileData ? new SQL.Database(fileData) : new SQL.Database();
 
-        // Wrap sql.js Database to mimic the small subset of better-sqlite3 API used.
-        const wrapper = (() => {
-          const _db = sqljsDB;
-          return {
-            exec(sql: string) { try { _db.exec(sql); } catch {} },
-            prepare(sql: string) {
-              const stmt = _db.prepare(sql);
-              return {
-                run: (...params: any[]) => {
+      // Wrap sql.js Database to mimic the small subset of better-sqlite3 API used.
+      const wrapper = (() => {
+        const _db = sqljsDB;
+        return {
+          exec(sql: string) { try { _db.exec(sql); } catch {} },
+          prepare(sql: string) {
+            const stmt = _db.prepare(sql);
+            return {
+              run: (...params: any[]) => {
+                try {
+                  let bindParams = (params.length === 1 && typeof params[0] === 'object' && !Array.isArray(params[0])) ? params[0] : params;
+                  // map plain object keys to named params with '@' prefix for sql.js
+                  if (bindParams && typeof bindParams === 'object' && !Array.isArray(bindParams)) {
+                    const mapped: any = {};
+                    for (const k of Object.keys(bindParams)) mapped[`@${k}`] = (bindParams as any)[k];
+                    bindParams = mapped;
+                  }
                   try {
-                    let bindParams = (params.length === 1 && typeof params[0] === 'object' && !Array.isArray(params[0])) ? params[0] : params;
-                    // map plain object keys to named params with '@' prefix for sql.js
-                    if (bindParams && typeof bindParams === 'object' && !Array.isArray(bindParams)) {
-                      const mapped: any = {};
-                      for (const k of Object.keys(bindParams)) mapped[`@${k}`] = (bindParams as any)[k];
-                      bindParams = mapped;
+                    // prefer stmt.run if available
+                    if (typeof stmt.run === 'function') {
+                      stmt.run(bindParams);
+                    } else {
+                      stmt.bind(bindParams);
+                      stmt.step();
+                      stmt.reset();
                     }
-                    try {
-                      // prefer stmt.run if available
-                      if (typeof stmt.run === 'function') {
-                        stmt.run(bindParams);
-                      } else {
-                        stmt.bind(bindParams);
-                        stmt.step();
-                        stmt.reset();
-                      }
-                    } catch (inner) {
-                      try { stmt.bind(bindParams); stmt.step(); stmt.reset(); } catch {}
-                    }
-                    // persist after mutating statements
-                    try { fs.writeFileSync(dbPath, Buffer.from(_db.export())); } catch {}
-                    return { changes: 1 };
-                  } catch { return { changes: 0 }; }
-                },
-                get: (p: any) => {
-                  try {
-                    const params = (p === undefined) ? [] : (Array.isArray(p) ? p : (typeof p === 'object' ? p : [p]));
-                    stmt.bind(params);
-                    const ok = stmt.step();
-                    const obj = ok ? (stmt.getAsObject ? stmt.getAsObject() : {}) : undefined;
-                    stmt.reset();
-                    return obj;
-                  } catch { return undefined; }
-                },
-                all: (p: any) => {
-                  const out: any[] = [];
-                  try {
-                    const params = (p === undefined) ? [] : (Array.isArray(p) ? p : (typeof p === 'object' ? p : [p]));
-                    stmt.bind(params);
-                    while (stmt.step()) {
-                      out.push(stmt.getAsObject ? stmt.getAsObject() : {});
-                    }
-                    stmt.reset();
-                  } catch { }
-                  return out;
-                }
-              };
-            },
-            transaction(fn: (items: any[]) => void) {
-              return (items: any[]) => {
-                try { _db.exec('BEGIN'); fn(items); _db.exec('COMMIT'); fs.writeFileSync(dbPath, Buffer.from(_db.export())); } catch { try { _db.exec('ROLLBACK'); } catch {} }
-              };
-            },
-            close: () => { try { fs.writeFileSync(dbPath, Buffer.from(_db.export())); } catch {}; try { _db.close(); } catch {} }
-          };
-        })();
+                  } catch (inner) {
+                    try { stmt.bind(bindParams); stmt.step(); stmt.reset(); } catch {}
+                  }
+                  // persist after mutating statements
+                  try { fs.writeFileSync(dbPath, Buffer.from(_db.export())); } catch {}
+                  return { changes: 1 };
+                } catch { return { changes: 0 }; }
+              },
+              get: (p: any) => {
+                try {
+                  const params = (p === undefined) ? [] : (Array.isArray(p) ? p : (typeof p === 'object' ? p : [p]));
+                  stmt.bind(params);
+                  const ok = stmt.step();
+                  const obj = ok ? (stmt.getAsObject ? stmt.getAsObject() : {}) : undefined;
+                  stmt.reset();
+                  return obj;
+                } catch { return undefined; }
+              },
+              all: (p: any) => {
+                const out: any[] = [];
+                try {
+                  const params = (p === undefined) ? [] : (Array.isArray(p) ? p : (typeof p === 'object' ? p : [p]));
+                  stmt.bind(params);
+                  while (stmt.step()) {
+                    out.push(stmt.getAsObject ? stmt.getAsObject() : {});
+                  }
+                  stmt.reset();
+                } catch { }
+                return out;
+              }
+            };
+          },
+          transaction(fn: (items: any[]) => void) {
+            return (items: any[]) => {
+              try { _db.exec('BEGIN'); fn(items); _db.exec('COMMIT'); fs.writeFileSync(dbPath, Buffer.from(_db.export())); } catch { try { _db.exec('ROLLBACK'); } catch {} }
+            };
+          },
+          close: () => { try { fs.writeFileSync(dbPath, Buffer.from(_db.export())); } catch {}; try { _db.close(); } catch {} }
+        };
+      })();
 
-        this.db = wrapper as any;
-        this.ensureSchema();
-      } catch (err) {
-        // Last resort: keep the simple in-memory fallback (no persistence)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        this.db = new (SimpleInMemoryDB as any)();
-        this.ensureSchema();
-      }
+      this.db = wrapper as any;
+      this.ensureSchema();
+    } catch (err) {
+      // Last resort: in-memory fallback (no persistence — WASM may be blocked)
+      this.db = new SimpleInMemoryDB();
+      this.ensureSchema();
     }
     // ensure cache dir
     try { fs.mkdirSync(path.join(base, 'b4xlib-cache'), { recursive: true }); } catch {}

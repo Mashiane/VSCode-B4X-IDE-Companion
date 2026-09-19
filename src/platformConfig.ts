@@ -1,7 +1,7 @@
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { execSync } from 'child_process';
+import { execFile } from 'child_process';
 import * as vscode from 'vscode';
 
 const appDataFolder = process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming');
@@ -28,18 +28,32 @@ export interface B4xPlatformSettings {
   configuredPlatforms: B4xPlatformPathSetting[];
 }
 
+/** Module-level cache for registry-based install dirs — shared across all calls. */
+let regDirsCache: Record<string, string> | undefined;
+
+/** Invalidate the platform registry cache so next call re-discovers installations. */
+export function invalidatePlatformCache(): void {
+  regDirsCache = undefined;
+}
+
 /**
  * Discovers B4X platform install directories from the Windows Registry.
  * Returns a map of platform key (b4a/b4j/b4r/b4i) -> full install directory path.
  * e.g. { b4a: 'C:\\Program Files\\Anywhere Software\\Basic4android',
  *         b4i: 'C:\\Program Files (x86)\\Anywhere Software\\B4i' }
  * Returns an empty object on non-Windows or if nothing is found.
+ *
+ * Uses execFileSync as synchronous fallback (only when cache hasn't been warmed).
+ * Call warmPlatformCache() during activation to pre-populate the cache asynchronously.
  */
 export function findPlatformInstallDirs(): Record<string, string> {
-  if (process.platform !== 'win32') return {};
+  // Return cached result if available (populated by warmPlatformCache or a previous call)
+  if (regDirsCache) return regDirsCache;
 
+  // Synchronous fallback — only runs if cache hasn't been warmed yet.
+  // This should rarely happen if warmPlatformCache is called at activation.
+  if (process.platform !== 'win32') return {};
   try {
-    // Enumerate all Uninstall entries, match B4X products by DisplayName, emit "key=path" pairs.
     const ps =
       `Get-ChildItem 'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',` +
       `'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall' -ErrorAction SilentlyContinue |` +
@@ -48,24 +62,64 @@ export function findPlatformInstallDirs(): Record<string, string> {
       ` if ($p.DisplayName -match '^(B4A|B4J|B4R|B4I) ' -and $p.InstallLocation) {` +
       ` $key = $Matches[1].ToLower(); Write-Output "$key=$($p.InstallLocation.TrimEnd('\\'))"` +
       ` } }`;
-    const output = execSync(
-      `powershell -NoProfile -NonInteractive -Command "${ps}"`,
-      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, timeout: 5000 }
+    // Use execFileSync to avoid shell injection — the script is a hardcoded string.
+    const { execFileSync } = require('child_process') as typeof import('child_process');
+    const output = execFileSync(
+      'powershell',
+      ['-NoProfile', '-NonInteractive', '-Command', ps],
+      { encoding: 'utf8', windowsHide: true, timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }
     ).trim();
     const result: Record<string, string> = {};
     for (const line of output.split(/\r?\n/)) {
       const eq = line.indexOf('=');
       if (eq > 0) result[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
     }
+    regDirsCache = result;
     return result;
   } catch {
-    // PowerShell unavailable or no match found
+    regDirsCache = {};
+    return {};
   }
-  return {};
 }
 
-/** Module-level cache for registry-based install dirs — shared across all calls. */
-let regDirsCache: Record<string, string> | undefined;
+/**
+ * Pre-warm the platform registry cache asynchronously.
+ * Call this during extension activation to avoid blocking the UI later.
+ * Uses execFile (no shell) for safety.
+ */
+export function warmPlatformCache(): Promise<void> {
+  if (process.platform !== 'win32') {
+    regDirsCache = {};
+    return Promise.resolve();
+  }
+
+  const ps =
+    `Get-ChildItem 'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall',` +
+    `'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall' -ErrorAction SilentlyContinue |` +
+    ` ForEach-Object {` +
+    ` $p = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue;` +
+    ` if ($p.DisplayName -match '^(B4A|B4J|B4R|B4I) ' -and $p.InstallLocation) {` +
+    ` $key = $Matches[1].ToLower(); Write-Output "$key=$($p.InstallLocation.TrimEnd('\\'))"` +
+    ` } }`;
+
+  return new Promise((resolve) => {
+    execFile(
+      'powershell',
+      ['-NoProfile', '-NonInteractive', '-Command', ps],
+      { encoding: 'utf8', windowsHide: true, timeout: 5000 },
+      (err, stdout) => {
+        if (err) { regDirsCache = {}; resolve(); return; }
+        const result: Record<string, string> = {};
+        for (const line of (stdout ?? '').split(/\r?\n/)) {
+          const eq = line.indexOf('=');
+          if (eq > 0) result[line.slice(0, eq).trim()] = line.slice(eq + 1).trim();
+        }
+        regDirsCache = result;
+        resolve();
+      },
+    );
+  });
+}
 
 export function getPlatformSettings(platformFilter?: B4xPlatformName): B4xPlatformSettings {
   const configuration = vscode.workspace.getConfiguration('b4xIntellisense');

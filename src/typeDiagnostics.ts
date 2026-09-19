@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 
 import { findMisplacedTypeRanges } from './typeDiagnosticsCore';
 
@@ -15,7 +15,7 @@ export function provideTypeDiagnosticsForDocument(document: vscode.TextDocument)
     const endLine = Math.min(document.lineCount - 1, r.endLine);
     const endChar = document.lineAt(endLine).text.length;
     const range = new vscode.Range(start, new vscode.Position(endLine, endChar));
-    const diag = new vscode.Diagnostic(range, 'Type declarations must be defined inside Sub Class_Globals or Sub Process_Globals', vscode.DiagnosticSeverity.Warning);
+    const diag = new vscode.Diagnostic(range, 'Type declarations must be defined inside Sub Class_Globals, Sub Globals, or Sub Process_Globals', vscode.DiagnosticSeverity.Warning);
     diag.source = 'b4x-intellisense';
     diagnostics.push(diag);
   }

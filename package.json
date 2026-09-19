@@ -2,8 +2,9 @@
   "name": "b4x-intellisense",
   "displayName": "B4X Code IDE Companion",
   "description": "B4X IDE companion for B4A, B4i, B4J, and B4R development in Visual Studio Code. IntelliSense, type inference, go-to-definition, diagnostics, code formatting, library management, and AI integration — all fully offline.",
-  "version": "0.1.419",
+  "version": "0.1.483",
   "publisher": "AneleMbangaMashy",
+  "license": "CC0-1.0",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -152,7 +153,7 @@
       },
       {
         "command": "b4xIntellisense.openSettings",
-        "title": "Open Extension Settings",
+        "title": "Settings",
         "category": "B4X Companion"
       },
       {
@@ -187,12 +188,12 @@
       },
       {
         "command": "b4xIntellisense.captureGif",
-        "title": "Capture GIF from Device",
+        "title": "Capture GIF",
         "category": "B4X Companion"
       },
       {
         "command": "b4xIntellisense.captureScreenshots",
-        "title": "Capture Screenshots (Scroll)",
+        "title": "Capture Screenshot",
         "category": "B4X Companion"
       },
       {
@@ -276,13 +277,23 @@
         "category": "B4X Companion"
       },
       {
-        "command": "b4xIntellisense.ollamaLaunch",
-        "title": "Ollama Launch VSCode Model",
+        "command": "b4xIntellisense.ollamaLaunchClaude",
+        "title": "Ollama Launch Claude Model",
         "category": "B4X Companion"
       },
       {
-        "command": "b4xIntellisense.ollamaLaunchClaude",
-        "title": "Ollama Launch Claude Model",
+        "command": "b4xIntellisense.ollamaLaunchCopilot",
+        "title": "Ollama Launch Copilot Model",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.ollamaLaunchOpenCode",
+        "title": "Ollama Launch OpenCode Model",
+        "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.ollamaLaunchCodex",
+        "title": "Ollama Launch Codex Model",
         "category": "B4X Companion"
       },
       {
@@ -319,6 +330,41 @@
         "command": "b4xIntellisense.checkHealth",
         "title": "IntelliSense Health",
         "category": "B4X Companion"
+      },
+      {
+        "command": "b4xIntellisense.copyAiContextBundle",
+        "title": "CodeBundle",
+        "category": "B4X"
+      },
+      {
+        "command": "b4xIntellisense.remapJavaStackTrace",
+        "title": "Stack Trace",
+        "category": "B4X"
+      },
+      {
+        "command": "b4xIntellisense.doctor",
+        "title": "Doctor / Environment Health Check",
+        "category": "B4X"
+      },
+      {
+        "command": "b4xIntellisense.packageB4XLib",
+        "title": "Make .b4xlib",
+        "category": "B4X"
+      },
+      {
+        "command": "b4xIntellisense.exportLayoutJson",
+        "title": "Export Layout as JSON (.bal/.bjl -> .json)",
+        "category": "B4X"
+      },
+      {
+        "command": "b4xIntellisense.importLayoutJson",
+        "title": "Import Layout from JSON (.json -> .bal/.bjl)",
+        "category": "B4X"
+      },
+      {
+        "command": "b4xIntellisense.installBridge",
+        "title": "Install B4A-Bridge to Device",
+        "category": "B4A"
       }
     ],
     "languages": [
@@ -511,6 +557,16 @@
           "command": "b4xIntellisense.installProject",
           "when": "b4x.hasBuildableProject && resourceExtname =~ /\\.(b4a|b4j)/ && explorerResourceIsFolder == false",
           "group": "navigation@30"
+        },
+        {
+          "command": "b4xIntellisense.exportLayoutJson",
+          "when": "resourceExtname =~ /\\.(bal|bjl|bil)/ && explorerResourceIsFolder == false",
+          "group": "b4xLayout@10"
+        },
+        {
+          "command": "b4xIntellisense.importLayoutJson",
+          "when": "resourceExtname == .json && explorerResourceIsFolder == false",
+          "group": "b4xLayout@20"
         }
       ],
       "commandPalette": [
@@ -537,6 +593,27 @@
         },
         {
           "command": "b4xIntellisense.reloadProject"
+        },
+        {
+          "command": "b4xIntellisense.copyAiContextBundle"
+        },
+        {
+          "command": "b4xIntellisense.remapJavaStackTrace"
+        },
+        {
+          "command": "b4xIntellisense.doctor",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.packageB4XLib"
+        },
+        {
+          "command": "b4xIntellisense.exportLayoutJson",
+          "when": "false"
+        },
+        {
+          "command": "b4xIntellisense.importLayoutJson",
+          "when": "false"
         },
         {
           "command": "b4xIntellisense.focusDashboard"
@@ -669,10 +746,16 @@
           "when": "false"
         },
         {
-          "command": "b4xIntellisense.ollamaLaunch"
+          "command": "b4xIntellisense.ollamaLaunchClaude"
         },
         {
-          "command": "b4xIntellisense.ollamaLaunchClaude"
+          "command": "b4xIntellisense.ollamaLaunchCopilot"
+        },
+        {
+          "command": "b4xIntellisense.ollamaLaunchOpenCode"
+        },
+        {
+          "command": "b4xIntellisense.ollamaLaunchCodex"
         },
         {
           "command": "b4xIntellisense.deepseekLaunch"
@@ -833,6 +916,11 @@
           "default": true,
           "description": "When true disables all console.log/console.warn/console.error output; use log file for all diagnostics."
         },
+        "b4xIntellisense.autoBackupEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true the extension will automatically perform periodic backups of the workspace at the configured interval."
+        },
         "b4xIntellisense.autoBackupInterval": {
           "type": "number",
           "default": 600000,
@@ -863,10 +951,20 @@
           "default": true,
           "description": "Detect Unused Subroutines"
         },
+        "b4xIntellisense.enableCodeSmellDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Detect B4X Code Smells and anti-patterns (e.g. DoEvents, File.DirDefaultExternal, Map.GetKeyAt, Cursor, raw SQL string concatenation)"
+        },
         "b4xIntellisense.enableUnusedLibraryDiagnostics": {
           "type": "boolean",
           "default": true,
           "description": "Detect Unused Libraries"
+        },
+        "b4xIntellisense.enableCompilerWarnings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show real-time B4X compiler warnings (unreachable code, missing return types, missing screen units, deprecated APIs, etc.) matching the installed warnings.txt engine."
         },
         "b4xIntellisense.adbPath": {
           "type": "string",
@@ -887,6 +985,66 @@
           "type": "string",
           "default": "https://docs.google.com/spreadsheets/d/1qFvc3Q70RriJS3m_ywBoJvZ47gSTVAuN_X04SI0_XBw/edit?gid=0",
           "description": "Google Sheets URL for fetching library data. Leave empty to disable Google Sheet integration."
+        },
+        "b4xIntellisense.b4aBuilderPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to B4ABuilder.exe. Auto-detected from B4A installation if empty."
+        },
+        "b4xIntellisense.b4aJavaPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to JDK javac.exe or bin folder for B4A. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4aAdditionalLibrariesFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Folder for additional B4A external libraries. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4aSharedFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Folder for shared code modules for B4A. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4jBuilderPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to B4JBuilder.exe. Auto-detected from B4J installation if empty."
+        },
+        "b4xIntellisense.b4jAdditionalLibrariesFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Folder for additional B4J external libraries. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4jSharedFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Folder for shared code modules for B4J. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4iJavaPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to JDK javac.exe or bin folder for B4i. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4iAdditionalLibrariesFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Folder for additional B4i external libraries. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4iSharedFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Folder for shared code modules for B4i. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4rAdditionalLibrariesFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Folder for additional B4R external libraries. Auto-detected from b4xV5.ini if empty."
+        },
+        "b4xIntellisense.b4rSharedFolder": {
+          "type": "string",
+          "default": "",
+          "description": "Folder for shared code modules for B4R. Auto-detected from b4xV5.ini if empty."
         }
       }
     },
@@ -944,8 +1102,10 @@
     "onCommand:b4xIntellisense.openPlatform",
     "onCommand:b4xIntellisense.runDiagnostics",
     "onCommand:b4xIntellisense.focusDashboard",
-    "onCommand:b4xIntellisense.ollamaLaunch",
     "onCommand:b4xIntellisense.ollamaLaunchClaude",
+    "onCommand:b4xIntellisense.ollamaLaunchCopilot",
+    "onCommand:b4xIntellisense.ollamaLaunchOpenCode",
+    "onCommand:b4xIntellisense.ollamaLaunchCodex",
     "onCommand:b4xIntellisense.deepseekLaunch",
     "onCommand:b4xIntellisense.browseLibraries",
     "onCommand:b4xIntellisense.openBjlEditor",
@@ -970,7 +1130,8 @@
     "inspect-index:repair": "echo 'inspect-index:repair requires server/indexer/inspect-index.js — not yet migrated'",
     "vscode:prepublish": "npm run build",
     "verify:vsix": "node scripts/verify-vsix.js",
-    "package:vsix": "npm run build && npx vsce package && npm run verify:vsix"
+    "package:vsix": "npm run build && npx vsce package && npm run verify:vsix",
+    "test:community": "node ./test/unit/codeSmells.test.js && node ./test/unit/eventHandlerValidator.test.js && node ./test/unit/contextBundle.test.js && node ./test/unit/runtimeErrorMapper.test.js && node ./test/unit/packagerAndDoctor.test.js && node ./test/unit/layoutCli.test.js"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.12.0",

@@ -7,6 +7,7 @@ import {
   B4xClass,
   B4xMethod,
   B4xProperty,
+  normalizeTypeName,
 } from './types';
 
 export type B4xMemberEntry =
@@ -21,23 +22,6 @@ export interface B4xMethodEntry {
 export interface B4xPropertyEntry {
   ownerClass: B4xClass;
   property: B4xProperty;
-}
-
-export function normalizeTypeName(value: string | undefined): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-
-  const arraySuffix = trimmed.endsWith('[]') ? '[]' : '';
-  const baseType = arraySuffix ? trimmed.slice(0, -2) : trimmed;
-  const simpleName = baseType.split('.').pop() ?? baseType;
-
-  return `${simpleName}${arraySuffix}`;
 }
 
 export class ApiIndexStore {

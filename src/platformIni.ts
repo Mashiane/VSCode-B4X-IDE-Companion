@@ -15,6 +15,12 @@ export interface PlatformIniFolders {
   platformFolder?: string;
   /** Full path to the javac.exe executable configured in the IDE */
   javacPath?: string;
+  /** Full path to the platform tools folder (e.g. Android SDK tools) */
+  toolsFolder?: string;
+  /** Full path to the java/bin directory for the platform */
+  javaBin?: string;
+  /** Default folder for new projects in the platform */
+  newProjectDefaultFolder?: string;
 }
 
 export interface PlatformIniSettings {
@@ -100,6 +106,9 @@ function entriesToFolders(entries: Map<string, string>): PlatformIniFolders {
     sharedModulesFolder: entries.get('sharedmodulesfolder'),
     platformFolder: entries.get('platformfolder'),
     javacPath: entries.get('javacpath'),
+    toolsFolder: entries.get('toolsfolder'),
+    javaBin: entries.get('javabin'),
+    newProjectDefaultFolder: entries.get('newprojectdefaultfolder'),
   };
 }
 

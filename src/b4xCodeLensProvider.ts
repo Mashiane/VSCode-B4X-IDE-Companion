@@ -6,10 +6,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { WorkspaceClassStore } from './types';
 
 export class B4xCodeLensProvider implements vscode.CodeLensProvider {
   constructor(
-    private readonly workspaceClasses: any,
+    private readonly workspaceClasses: WorkspaceClassStore,
   ) {}
 
   private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();

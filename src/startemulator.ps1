@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$EmulatorPath = '',
     [string]$ApkPath = '',
     [string]$PackageName = '',
@@ -7,6 +7,30 @@ param(
     [string]$Gpu = 'auto',           # options: auto|host|swiftshader_indirect|off
     [switch]$FallbackToSoftwareGpu    # when set, detect GPU/emulation errors and restart once with SwiftShader
 )
+
+function Invoke-AvdTemplateSetup {
+    param([string]$targetEmulatorPath)
+    $candidatePaths = @(
+        (Join-Path (Split-Path -Parent $PSScriptRoot) "templates\emulator\install.ps1"),
+        (Join-Path $PSScriptRoot "..\templates\emulator\install.ps1"),
+        (Join-Path $PSScriptRoot "templates\emulator\install.ps1"),
+        "D:\AVD_Package_4in_Phone\install.ps1"
+    )
+    $templateScript = $candidatePaths | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if ($templateScript) {
+        Write-Host "`nNo Android emulators (AVDs) found on this machine." -ForegroundColor Yellow
+        Write-Host "B4X Companion includes a pre-configured 720x1612 emulator template." -ForegroundColor Cyan
+        Write-Host "Would you like to auto-setup '4in_Phone_Platform_36_google_apis' now? (Y/N): " -NoNewline -ForegroundColor Yellow
+        $ans = Read-Host
+        if ($ans -match '^[yY]') {
+            $sdkRoot = Split-Path -Parent (Split-Path -Parent $targetEmulatorPath)
+            & $templateScript -TargetSdkPath $sdkRoot
+            return $true
+        }
+    }
+    return $false
+}
+
 
 # Use provided path or default
 if ($EmulatorPath -and (Test-Path $EmulatorPath)) {
@@ -27,8 +51,12 @@ $avdListOutput = & $emulatorPath -list-avds 2>$null
 Write-Host "Raw output: [$avdListOutput]" -ForegroundColor Gray
 
 if (-not $avdListOutput -or $avdListOutput.Trim() -eq '') {
-    Write-Warning "No Android emulators (AVDs) found. Create one via Android Studio Device Manager first."
-    exit 1
+    if (Invoke-AvdTemplateSetup -targetEmulatorPath $emulatorPath) {
+        $avdListOutput = & $emulatorPath -list-avds 2>$null
+    } else {
+        Write-Warning "No Android emulators (AVDs) found. Create one via Android Studio Device Manager first."
+        exit 1
+    }
 }
 
 # Parse AVD names - each line is a plain AVD name (no '/' separator in modern emulator output)
@@ -327,3 +355,4 @@ if ($LaunchAfterBoot -or $ApkPath -or $PackageName) {
     }
 
 }
+

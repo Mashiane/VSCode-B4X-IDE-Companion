@@ -6,6 +6,7 @@ import { parseTypedNameList, stripComment, getPostDesignStartLine } from './b4xD
 import { normalizeBasePath } from './projectFile';
 import { B4xClass, B4xEventDef, B4xFieldDef, B4xManifest, B4xMethod, B4xParameter, B4xProperty, B4xPropertyAccess } from './types';
 import { libraryIndex, ParsedModuleBlob } from './storage/libraryIndexSqlite';
+import { B4xDocument, LightweightDocument } from './lightweightDocument';
 
 export interface WorkspaceMethodInfo extends B4xMethod {
   location: vscode.Location;
@@ -53,6 +54,26 @@ export class WorkspaceClassStore {
     return Array.from(all);
   }
 
+  /** Number of project/workspace module files indexed. */
+  public get workspaceFileCount(): number {
+    return this.workspaceFileToClassName.size;
+  }
+
+  /** Number of classes from project/workspace modules. */
+  public get workspaceClassCount(): number {
+    return this.workspaceClassesByName.size;
+  }
+
+  /** Number of external/reference module files indexed (from b4xlib extraction, shared modules, etc.). */
+  public get referenceFileCount(): number {
+    return this.referenceFileToClassName.size;
+  }
+
+  /** Number of classes from external/reference modules. */
+  public get referenceClassCount(): number {
+    return this.referenceClassesByName.size;
+  }
+
   public async refresh(
     allowedModuleBasePaths: ReadonlySet<string> | undefined = this.allowedModuleBasePaths,
     // If provided, `preconfirmedFiles` is the list of verified module file paths
@@ -61,15 +82,9 @@ export class WorkspaceClassStore {
     // base paths again. This eliminates duplicate filesystem checks.
     preconfirmedFiles?: string[],
   ): Promise<void> {
-    console.log(`[B4X TRACE ${new Date().toISOString()}] WorkspaceClassStore.refresh.enter`);
-    console.log(`[B4X DEBUG] refresh called with allowedModuleBasePaths:`, allowedModuleBasePaths ? Array.from(allowedModuleBasePaths) : 'undefined');
-    console.log(`[B4X DEBUG] refresh preconfirmedFiles:`, preconfirmedFiles);
-    console.log(`[B4X DEBUG] refresh stack trace:`, new Error().stack);
-
     // Defensive: callers sometimes pass `undefined` here (see logs). Coerce to
     // an empty array so downstream logic can assume an array type.
     if (!Array.isArray(preconfirmedFiles)) {
-      console.log(`[B4X DEBUG] preconfirmedFiles was ${typeof preconfirmedFiles}; coercing to []`);
       preconfirmedFiles = [];
     }
     this.setAllowedModuleBasePaths(allowedModuleBasePaths);
@@ -81,25 +96,18 @@ export class WorkspaceClassStore {
     // by a targeted discovery routine) — this avoids re-checking candidates.
     const uniquePaths = new Set<string>();
     if (preconfirmedFiles.length > 0) {
-      console.log(`[B4X DEBUG] using preconfirmedFiles:`, preconfirmedFiles);
       for (const p of preconfirmedFiles) uniquePaths.add(p);
     } else {
       if (!this.allowedModuleBasePaths || this.allowedModuleBasePaths.size === 0) {
-        console.log(`[B4X DEBUG] early return - no allowedModuleBasePaths`);
         return;
       }
 
-      console.log(`[B4X DEBUG] probing allowedModuleBasePaths:`, Array.from(this.allowedModuleBasePaths));
       for (const base of this.allowedModuleBasePaths) {
         try {
           const candBas = path.resolve(`${base}.bas`);
-          console.log(`[B4X DEBUG] checking candidate: ${candBas}`);
           const statBas = await fs.stat(candBas).catch(() => undefined);
           if (statBas && statBas.isFile()) {
-            console.log(`[B4X DEBUG] found: ${candBas}`);
             uniquePaths.add(candBas);
-          } else {
-            console.log(`[B4X DEBUG] not found: ${candBas}`);
           }
         } catch {
           // ignore missing candidates
@@ -123,7 +131,8 @@ export class WorkspaceClassStore {
           }
         }
 
-        const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+        const document = LightweightDocument.fromFile(filePath);
+        if (!document) return;
         const parsedDoc = parseWorkspaceClassDocument(document);
         if (parsedDoc) {
           this.upsertDocumentFromParsed(document, parsedDoc, 'workspace');
@@ -195,23 +204,22 @@ export class WorkspaceClassStore {
     this.referenceClassesByName.clear();
     this.referenceFileToClassName.clear();
 
-    await Promise.all(normalized.map(async (filePath) => {
+    // Use LightweightDocument instead of openTextDocument to avoid VS Code's
+    // heavyweight document lifecycle (language detection, model creation,
+    // event emission) for files that only need text scanning.
+    for (const filePath of normalized) {
       try {
-        const stat = await fs.stat(filePath).catch(() => undefined);
-        if (!stat?.isFile()) {
-          return;
+        const doc = LightweightDocument.fromFile(filePath);
+        if (doc) {
+          this.upsertDocument(doc, 'external');
         }
-
-        const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
-        this.upsertDocument(document, 'external');
       } catch (err) {
         console.warn('B4X: replaceReferenceModules failed for', filePath, err);
       }
-    }));
+    }
   }
 
   public clear(): void {
-    console.log(`[B4X TRACE ${new Date().toISOString()}] WorkspaceClassStore.clear`);
     this.workspaceClassesByName.clear();
     this.referenceClassesByName.clear();
     this.workspaceFileToClassName.clear();
@@ -219,8 +227,7 @@ export class WorkspaceClassStore {
     this.allowedModuleBasePaths = undefined;
   }
 
-  public upsertDocument(document: vscode.TextDocument, source: 'workspace' | 'external' = 'workspace', manifest?: B4xManifest): void {
-    console.log(`[B4X TRACE ${new Date().toISOString()}] WorkspaceClassStore.upsertDocument.enter -> ${document.uri.fsPath} (${source})`);
+  public upsertDocument(document: B4xDocument, source: 'workspace' | 'external' = 'workspace', manifest?: B4xManifest): void {
     const fileToClassName = source === 'workspace' ? this.workspaceFileToClassName : this.referenceFileToClassName;
     const classesByName = source === 'workspace' ? this.workspaceClassesByName : this.referenceClassesByName;
     const previousClassName = fileToClassName.get(document.uri.fsPath.toLowerCase());
@@ -243,7 +250,7 @@ export class WorkspaceClassStore {
   }
 
   /** Insert a pre-parsed document into the store (avoids double-parsing). */
-  public upsertDocumentFromParsed(document: vscode.TextDocument, parsed: WorkspaceClassInfo, source: 'workspace' | 'external' = 'workspace'): void {
+  public upsertDocumentFromParsed(document: B4xDocument, parsed: WorkspaceClassInfo, source: 'workspace' | 'external' = 'workspace'): void {
     const fileToClassName = source === 'workspace' ? this.workspaceFileToClassName : this.referenceFileToClassName;
     const classesByName = source === 'workspace' ? this.workspaceClassesByName : this.referenceClassesByName;
     const previousClassName = fileToClassName.get(document.uri.fsPath.toLowerCase());
@@ -257,7 +264,6 @@ export class WorkspaceClassStore {
   }
 
   public delete(uri: vscode.Uri): void {
-    console.log(`[B4X TRACE ${new Date().toISOString()}] WorkspaceClassStore.delete -> ${uri.fsPath}`);
     deleteFromSourceMaps(uri.fsPath, this.workspaceFileToClassName, this.workspaceClassesByName);
     deleteFromSourceMaps(uri.fsPath, this.referenceFileToClassName, this.referenceClassesByName);
   }
@@ -376,7 +382,7 @@ export class WorkspaceClassStore {
   // and inconsistent checks between `refresh()` and `upsertDocument()`.
 }
 
-export function parseWorkspaceClassDocument(document: vscode.TextDocument, manifest?: B4xManifest): WorkspaceClassInfo | undefined {
+export function parseWorkspaceClassDocument(document: B4xDocument, manifest?: B4xManifest): WorkspaceClassInfo | undefined {
   const moduleType = getWorkspaceModuleType(document);
   if (!moduleType) {
     return undefined;
@@ -421,7 +427,7 @@ export function parseWorkspaceClassDocument(document: vscode.TextDocument, manif
       }
       if (trimmed === '' || /^Type\s*=/i.test(trimmed) || /^@/i.test(trimmed) || /^#/i.test(trimmed)) {
         // Skip blank lines, Type= directives, attributes, and compiler directives
-        if (trimmed !== '' && !/^Type\s*=/i.test(trimmed) && !/^@/i.test(trimmed)) {
+        if (trimmed !== '' && !/^Type\s*=/i.test(trimmed) && !/^@/i.test(trimmed) && !/^#/i.test(trimmed)) {
           seenContent = true;
         }
       } else {
@@ -537,7 +543,7 @@ export function parseWorkspaceClassDocument(document: vscode.TextDocument, manif
   };
 }
 
-function getWorkspaceModuleType(document: vscode.TextDocument): WorkspaceClassInfo['moduleType'] | undefined {
+function getWorkspaceModuleType(document: B4xDocument): WorkspaceClassInfo['moduleType'] | undefined {
   const filePath = document.uri.fsPath.toLowerCase();
   if (!filePath.endsWith('.bas')) {
     return undefined;
@@ -617,7 +623,7 @@ function getWorkspaceModuleType(document: vscode.TextDocument): WorkspaceClassIn
 }
 
 function parseWorkspaceMethod(
-  document: vscode.TextDocument,
+  document: B4xDocument,
   lineNumber: number,
   code: string,
 ): WorkspaceMethodInfo | undefined {
@@ -663,7 +669,7 @@ function parseWorkspaceParameters(source: string): B4xParameter[] {
 }
 
 function parseClassGlobalDeclarations(
-  document: vscode.TextDocument,
+  document: B4xDocument,
   lineNumber: number,
   code: string,
 ): WorkspacePropertyInfo[] {
@@ -821,12 +827,12 @@ function mergePropertiesWithAccessors(
   return [...resultMap.values()];
 }
 
-function createLineLocation(document: vscode.TextDocument, lineNumber: number): vscode.Location {
+function createLineLocation(document: B4xDocument, lineNumber: number): vscode.Location {
   const line = document.lineAt(lineNumber);
   return new vscode.Location(document.uri, line.range);
 }
 
-function createNameLocation(document: vscode.TextDocument, lineNumber: number, name: string): vscode.Location {
+function createNameLocation(document: B4xDocument, lineNumber: number, name: string): vscode.Location {
   const line = document.lineAt(lineNumber);
   const start = line.text.toLowerCase().indexOf(name.toLowerCase());
   if (start < 0) {

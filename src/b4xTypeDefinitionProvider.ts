@@ -5,11 +5,12 @@
  */
 
 import * as vscode from 'vscode';
+import { WorkspaceClassStore, XmlLibraryStore } from './types';
 
 export class B4xTypeDefinitionProvider implements vscode.TypeDefinitionProvider {
   constructor(
-    private readonly workspaceClasses: any,
-    private readonly xmlLibraries: any,
+    private readonly workspaceClasses: WorkspaceClassStore,
+    private readonly xmlLibraries: XmlLibraryStore,
     private readonly primitiveTypes: any,
   ) {}
 

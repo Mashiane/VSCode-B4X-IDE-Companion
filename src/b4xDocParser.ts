@@ -8,6 +8,7 @@ import {
   B4xProperty,
   B4xPropertyAccess,
 } from './types';
+import { B4xDocument } from './lightweightDocument';
 
 const placeholderLibraryPrefix = '__blank_library_';
 const placeholderClassPrefix = '__blank_class_';
@@ -173,7 +174,7 @@ export function getCallContext(linePrefix: string): CallContext | undefined {
   return undefined;
 }
 
-export function getPostDesignStartLine(document: vscode.TextDocument): number {
+export function getPostDesignStartLine(document: B4xDocument): number {
   const marker = '@EndOfDesignText@';
   // Scan up to 10,000 lines for the @EndOfDesignText@ marker.
   // Large B4X projects with embedded designer data can exceed this,
@@ -198,11 +199,22 @@ function countTopLevelCommas(text: string): number {
 
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
-    if (ch === '"' && (i === 0 || text[i - 1] !== '\\')) {
-      inString = !inString;
+    if (inString) {
+      // Handle B4X escaped quotes ("")
+      if (ch === '"' && i + 1 < text.length && text[i + 1] === '"') {
+        i++; // skip the escaped quote pair
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+      }
       continue;
     }
-    if (inString) continue;
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
 
     if (ch === '(') {
       nesting += 1;
@@ -321,6 +333,8 @@ export function parseTypedNameList(clause: string): TypedNameEntry[] {
 
     const typedMatch = /^(?<name>[A-Za-z_][A-Za-z0-9_]*)\s+As\s+(?<type>[A-Za-z_][A-Za-z0-9_\.\[\]]*)(?:\s*=.+)?$/i.exec(segment);
     if (typedMatch?.groups?.name) {
+      // In B4X, "Dim a, b, c As String" means ALL of a, b, c are As String.
+      // pendingNames holds untyped names from previous segments in the same Dim.
       const names = [...pendingNames, typedMatch.groups.name];
       pendingNames.length = 0;
 
@@ -333,9 +347,15 @@ export function parseTypedNameList(clause: string): TypedNameEntry[] {
 
     const nameMatch = /^(?<name>[A-Za-z_][A-Za-z0-9_]*)(?:\s*=.+)?$/i.exec(segment);
     if (nameMatch?.groups?.name) {
+      // Don't push to result yet — this name might inherit a type from a
+      // subsequent "As Type" segment (e.g. "Dim a, b As String").
       pendingNames.push(nameMatch.groups.name);
-      result.push({ name: nameMatch.groups.name });
     }
+  }
+
+  // Flush any remaining untyped names (e.g. "Dim x, y" with no As clause).
+  for (const name of pendingNames) {
+    result.push({ name });
   }
 
   return result;
@@ -737,7 +757,12 @@ function resolveClassName(item: B4xClass): string | undefined {
     return 'Common';
   }
 
-  return undefined;
+  // If no pattern matched, preserve the placeholder name rather than dropping the class entirely.
+  const placeholderMatch = /^ph_(\d+)$/.exec(item.name);
+  if (placeholderMatch) {
+    return `UnknownClass_${placeholderMatch[1]}`;
+  }
+  return item.name;
 }
 
 function resolveLibraryName(name: string): string {

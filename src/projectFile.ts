@@ -52,6 +52,25 @@ export interface B4xProjectConfig {
    * External module files that live outside the current workspace.
    */
   externalModuleFiles?: readonly string[];
+
+  /**
+   * Project files listed in the .b4a/.b4i/.b4j project file.
+   */
+  projectFiles?: ProjectFileEntry[];
+}
+
+/**
+ * Represents a single file entry from the project file's FileN lines.
+ */
+export interface ProjectFileEntry {
+  /** Filename without directory path (e.g. "layout1.bal"). */
+  name: string;
+  /** Lowercase extension without dot (e.g. "bal", not ".bal"). */
+  extension: string;
+  /** Resolved absolute path on disk. */
+  absolutePath: string;
+  /** Whether the file was found on disk. */
+  exists: boolean;
 }
 
 export async function loadWorkspaceProjectConfig(
@@ -115,12 +134,12 @@ async function parseProjectFile(
   const libraries = new Set<string>();
   const moduleBasePaths = new Set<string>();
   const resolvedModuleFiles: string[] = [];
+  const projectFiles: ProjectFileEntry[] = [];
 
   // Read file directly from disk to avoid VS Code document issues
   let fileContent: string;
   try {
     fileContent = await fs.readFile(document.uri.fsPath, 'utf8');
-    console.log(`[B4X DEBUG] parseProjectFile: Read ${fileContent.length} bytes from ${document.uri.fsPath}`);
   } catch (err) {
     console.error(`[B4X ERROR] Failed to read file ${document.uri.fsPath}`, err);
     // Fall back to document-based parsing
@@ -131,11 +150,6 @@ async function parseProjectFile(
   // Use a simple replace + split approach to avoid regex issues
   const normalizedContent = fileContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = normalizedContent.split('\n');
-  console.log(`[B4X DEBUG] parseProjectFile: ${lines.length} lines found`);
-  console.log(`[B4X DEBUG] parseProjectFile: first 15 lines:`);
-  for (let i = 0; i < Math.min(15, lines.length); i++) {
-    console.log(`  Line ${i}: ${JSON.stringify(lines[i])}`);
-  }
 
   for (let lineNumber = 0; lineNumber < lines.length; lineNumber += 1) {
     const line = lines[lineNumber];
@@ -146,7 +160,6 @@ async function parseProjectFile(
     rawLine = rawLine.replace(/^\ufeff/, '').trim();
 
     if (rawLine.includes('@EndOfDesignText@')) {
-      console.log(`[B4X DEBUG] parseProjectFile: Found @EndOfDesignText@ at line ${lineNumber}`);
       break;
     }
     if (!rawLine || !rawLine.includes('=')) {
@@ -164,14 +177,12 @@ async function parseProjectFile(
       continue;
     }
 
-    console.log(`[B4X DEBUG] parseProjectFile: line ${lineNumber} key="${key}" value="${value}"`);
 
     if (/^library\d+$/i.test(key)) {
       // Trim whitespace to tolerate malformed project files and be resilient to
       // stray trailing spaces (e.g. "B4XPages ") that would otherwise fail
       // to match the corresponding library files.
       libraries.add(value.trim().toLowerCase());
-      console.log(`[B4X DEBUG] parseProjectFile: Added library "${value.trim().toLowerCase()}"`);
       continue;
     }
 
@@ -185,14 +196,11 @@ async function parseProjectFile(
       // Build the full path and normalize it (resolves .. and . segments)
       const modulePath = path.normalize(path.resolve(projectDirectory, moduleValue));
 
-      console.log(`[B4X DEBUG] Parsing ${key}: value="${value}", moduleValue="${moduleValue}", modulePath="${modulePath}"`);
-      console.log(`[B4X DEBUG] Parsing ${key}: projectDirectory="${projectDirectory}"`);
 
       // Prefer modules that actually exist. Try project-local first, then
       // fall back to shared modules folders.
       let resolvedFile = await resolveExistingModuleFile(modulePath);
 
-      console.log(`[B4X DEBUG] ${key}: resolvedFile="${resolvedFile ?? 'NOT FOUND'}"`);
 
       if (!resolvedFile) {
         for (const shared of sharedModuleFolders) {
@@ -205,25 +213,38 @@ async function parseProjectFile(
       const baseToStore = normalizeBasePath(resolvedFile ?? modulePath);
       moduleBasePaths.add(baseToStore);
 
-      console.log(`[B4X DEBUG] ${key}: baseToStore="${baseToStore}"`);
 
       if (resolvedFile) {
         resolvedModuleFiles.push(resolvedFile);
       }
     }
+
+    if (/^file\d+$/i.test(key)) {
+      // Skip .bas files — they are code modules handled by ModuleN
+      const ext = path.extname(value).toLowerCase();
+      if (ext === '.bas') {
+        continue;
+      }
+
+      // Files/ sits in the same directory as the .b4a file (projectDirectory).
+      const filePath = path.normalize(path.resolve(projectDirectory, 'Files', value));
+      const fileName = path.basename(filePath);
+      const fileExt = ext ? ext.slice(1) : '';
+      let fileExists = false;
+      try {
+        const stat = await fs.stat(filePath);
+        fileExists = stat.isFile();
+      } catch {
+        fileExists = false;
+      }
+
+      projectFiles.push({ name: fileName, extension: fileExt, absolutePath: filePath, exists: fileExists });
+      continue;
+    }
   }
 
   // Ensure any Main code embedded in the .b4a after @EndOfDesignText@ is generated
   await ensureGeneratedMainFile(document, projectDirectory);
-
-  console.log(`[B4X DEBUG] parseProjectFile returning:`, {
-    projectFilePath: document.uri.fsPath,
-    projectDirectory,
-    platform: detectPlatformFromPath(document.uri.fsPath),
-    allowedLibraries: Array.from(libraries),
-    allowedModuleBasePaths: Array.from(moduleBasePaths),
-    allowedModuleFiles: resolvedModuleFiles,
-  });
 
   return {
     projectFilePath: document.uri.fsPath,
@@ -233,6 +254,7 @@ async function parseProjectFile(
     allowedModuleBasePaths: moduleBasePaths,
     allowedModuleFiles: resolvedModuleFiles,
     externalModuleFiles: Array.from(new Set(resolvedModuleFiles)).filter((filePath) => !isInsideWorkspace(filePath)),
+    projectFiles,
   };
 }
 

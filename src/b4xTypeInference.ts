@@ -51,6 +51,12 @@ export function inferCompletionOwnerClass(
   return findOwnerClassFromLocalSymbols(memberAccess.expression, document, workspaceClasses, xmlLibraries, primitiveTypes);
 }
 
+export function getMemberCompletionPrefix(
+  document: vscode.TextDocument,
+  position: vscode.Position,
+): string | undefined {
+  return getMemberAccessInfo(getLinePrefix(document, position))?.memberPrefix;
+}
 
 export function resolveExpressionType(
   expression: string,

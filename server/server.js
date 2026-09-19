@@ -45,16 +45,28 @@ try {
 
   connection.onInitialize((params) => {
     try {
-      const root = (params && (params.rootPath || params.rootUri)) || null;
+      // Prefer explicit projectRoot from initializationOptions (set by the
+      // extension from lastOpenedProjectFile). This ensures the server indexes
+      // the correct B4X project directory even when the workspace folders
+      // don't include it (e.g. autoOpenProjectFolderOnOpen = false).
+      const root = (params && params.initializationOptions && params.initializationOptions.projectRoot)
+        || (params && (params.rootPath || params.rootUri))
+        || null;
       workspaceRoot = root;
-      logger.info('initialize', { root });
+      logger.info('initialize', { root, source: (params && params.initializationOptions && params.initializationOptions.projectRoot) ? 'initializationOptions' : 'workspace' });
       // Start async disk load without blocking init response. Pass the
       // language-server connection so the indexer can notify the client
       // about progress (start/progress/done).
       docManager.loadFromDisk(root, connection, workerPool).catch((e) => {
         logger.error('loadFromDisk.error', { error: e && (e.stack || e.message) });
+        // Notify the client that indexing failed so the user can see something is wrong
+        try {
+          if (connection && typeof connection.sendNotification === 'function') {
+            connection.sendNotification('b4x/indexingFailed', { error: e && (e.message || String(e)) });
+          }
+        } catch (_) {}
       });
-    } catch (e) { /* ignore */ }
+    } catch (e) { logger.error('onInitialize.error', { error: e && (e.stack || e.message) }); }
     return {
       capabilities: {
         textDocumentSync: TextDocumentSyncKind.Full,
@@ -70,19 +82,22 @@ try {
   // With Full sync, onDidOpen fires then onDidChangeContent fires immediately with the same text.
   // openDocument checks if already tracked to avoid redundant parsing.
   documents.onDidChangeContent((change) => {
-    try { docManager.changeDocument(change.document.uri, change.document.getText()); } catch (err) { /* ignore */ }
-    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { /* ignore */ }
+    // If this file was previously blacklisted due to a worker crash, clear
+    // the blacklist entry so the file can be re-indexed on the next save.
+    try { workerPool.clearFailedFile(change.document.uri); } catch (_) {}
+    try { docManager.changeDocument(change.document.uri, change.document.getText()); } catch (err) { logger.error('onDidChangeContent.error', { uri: change.document.uri, error: err && (err.stack || err.message) }); }
+    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { logger.error('onDidChangeContent.diagnostics.error', { uri: change.document.uri, error: err && (err.stack || err.message) }); }
   });
 
   documents.onDidOpen((change) => {
     // Skip if already indexed by onDidChangeContent to avoid double-parsing
     if (docManager.docs.has(change.document.uri)) return;
-    try { docManager.openDocument(change.document.uri, change.document.getText()); } catch (err) { /* ignore */ }
-    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { /* ignore */ }
+    try { docManager.openDocument(change.document.uri, change.document.getText()); } catch (err) { logger.error('onDidOpen.error', { uri: change.document.uri, error: err && (err.stack || err.message) }); }
+    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { logger.error('onDidOpen.diagnostics.error', { uri: change.document.uri, error: err && (err.stack || err.message) }); }
   });
 
   documents.onDidClose((change) => {
-    try { docManager.closeDocument(change.document.uri); } catch (err) { /* ignore */ }
+    try { docManager.closeDocument(change.document.uri); } catch (err) { logger.error('onDidClose.error', { uri: change.document.uri, error: err && (err.stack || err.message) }); }
   });
 
   documents.onDidSave((change) => {
@@ -96,12 +111,12 @@ try {
           if (seq >= parseSequence) {
             try {
               docManager.setSymbolsForUri(uri, res.symbols);
-            } catch (e) { /* ignore */ }
+            } catch (e) { logger.error('onDidSave.setSymbols.error', { uri, error: e && (e.stack || e.message) }); }
           }
         }
-      }).catch(() => {});
-    } catch (err) { /* ignore */ }
-    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { /* ignore */ }
+      }).catch((err) => { logger.error('onDidSave.queueParse.error', { uri, error: err && (err.stack || err.message) }); });
+    } catch (err) { logger.error('onDidSave.error', { uri: change.document.uri, error: err && (err.stack || err.message) }); }
+    try { publishDiagnosticsForUri(change.document.uri); } catch (err) { logger.error('onDidSave.diagnostics.error', { uri: change.document.uri, error: err && (err.stack || err.message) }); }
   });
 
   connection.onCompletion(async (textDocumentPosition, token) => {
@@ -126,7 +141,7 @@ try {
       const items = raw.slice(0, 100).map((s) => ({
         label: s.name,
         kind: 3,
-        detail: `${s.kind} — ${s.file}:${s.line + 1}`,
+        detail: `${s.kind} â€” ${s.file}:${s.line + 1}`,
         data: { file: s.file, line: s.line },
       }));
       logger.info('completion', { durationMs: Date.now() - start, resultCount: items.length, prefix });
@@ -289,11 +304,11 @@ try {
         try {
           const selStart = range.start.line; const selEnd = range.end.line; const lines = content.split(/\r?\n/); const selText = lines.slice(selStart, selEnd + 1).join('\n');
           const idRegex = /\b[A-Za-z_][A-Za-z0-9_]*\b/g; const ids = new Set(); let m; while ((m = idRegex.exec(selText)) !== null) ids.add(m[0]);
-          const declaredInSelection = new Set(); const selLines = selText.split(/\r?\n/); for (const l of selLines) { const dm = /\bDim\s+([A-Za-z_][A-Za-z0-9_]*)/i.exec(l); if (dm) declaredInSelection.add(dm[1]); const asgn = /\b([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(l); if (asgn) declaredInSelection.add(asgn[1]); }
+          const declaredInSelection = new Set(); const selLines = selText.split(/\r?\n/); for (const l of selLines) { const dimMatch = /^\s*(?:Dim|Private|Public)\s+(.+)$/i.exec(l); if (dimMatch) { for (const seg of dimMatch[1].split(',')) { const name = seg.trim().replace(/\s+As\s+.+$/i, '').replace(/\s*=.+$/, '').trim(); if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) declaredInSelection.add(name); } } const asgn = /\b([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(l); if (asgn) declaredInSelection.add(asgn[1]); }
           let subStart = 0; for (let i = selStart; i >= 0; i--) { const l = lines[i] || ''; if (/^\s*Sub\b/i.test(l)) { subStart = i; break; } }
           let subEnd = lines.length - 1; for (let i = selEnd; i < lines.length; i++) { const l = lines[i] || ''; if (/^\s*End\s+Sub\b/i.test(l)) { subEnd = i; break; } }
-          const declaredOutsideSelection = new Set(); for (let i = subStart; i <= subEnd; i++) { if (i >= selStart && i <= selEnd) continue; const l = lines[i] || ''; const dm = /\bDim\s+([A-Za-z_][A-Za-z0-9_]*)/i.exec(l); if (dm) declaredOutsideSelection.add(dm[1]); const asgn = /\b([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(l); if (asgn) declaredOutsideSelection.add(asgn[1]); const sig = /^\s*Sub\s+[A-Za-z_][A-Za-z0-9_]*\s*\(([^)]*)\)/i.exec(l); if (sig && sig[1]) { const parts = sig[1].split(',').map(p => p.trim()).filter(Boolean); for (const p of parts) { const pn = p.split(' ')[0]; if (pn) declaredOutsideSelection.add(pn); } } }
-          const globalDeclared = new Set(); for (let i = 0; i < lines.length; i++) { const l = lines[i] || ''; if (/^\s*Sub\s+Class_/i.test(l) || /^\s*Sub\s+Process_Globals/i.test(l)) { for (let j = i + 1; j < lines.length; j++) { const lj = lines[j] || ''; const dm = /\bDim\s+([A-Za-z_][A-Za-z0-9_]*)/i.exec(lj); if (dm) globalDeclared.add(dm[1]); if (/^\s*End\s+Sub\b/i.test(lj)) { break; } } } }
+          const declaredOutsideSelection = new Set(); for (let i = subStart; i <= subEnd; i++) { if (i >= selStart && i <= selEnd) continue; const l = lines[i] || ''; const dimMatch = /^\s*(?:Dim|Private|Public)\s+(.+)$/i.exec(l); if (dimMatch) { for (const seg of dimMatch[1].split(',')) { const name = seg.trim().replace(/\s+As\s+.+$/i, '').replace(/\s*=.+$/, '').trim(); if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) declaredOutsideSelection.add(name); } } const asgn = /\b([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(l); if (asgn) declaredOutsideSelection.add(asgn[1]); const sig = /^\s*Sub\s+[A-Za-z_][A-Za-z0-9_]*\s*\(([^)]*)\)/i.exec(l); if (sig && sig[1]) { const parts = sig[1].split(',').map(p => p.trim()).filter(Boolean); for (const p of parts) { const pn = p.split(' ')[0]; if (pn) declaredOutsideSelection.add(pn); } } }
+          const globalDeclared = new Set(); for (let i = 0; i < lines.length; i++) { const l = lines[i] || ''; if (/^\s*Sub\s+Class_/i.test(l) || /^\s*Sub\s+Process_Globals/i.test(l)) { for (let j = i + 1; j < lines.length; j++) { const lj = lines[j] || ''; const dimMatch = /^\s*(?:Dim|Private|Public)\s+(.+)$/i.exec(lj); if (dimMatch) { for (const seg of dimMatch[1].split(',')) { const name = seg.trim().replace(/\s+As\s+.+$/i, '').replace(/\s*=.+$/, '').trim(); if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) globalDeclared.add(name); } } if (/^\s*End\s+Sub\b/i.test(lj)) { break; } } } }
           const candidateParams = [...ids].filter((id) => !declaredInSelection.has(id) && !/^Sub$|^End$|^Type$|^End Sub$/i.test(id));
           const candidatesFiltered = candidateParams.filter((id) => {
             if (declaredOutsideSelection.has(id)) return true; if (globalDeclared.has(id)) return true; const before = lines.slice(subStart, selStart).join('\n'); const after = lines.slice(selEnd + 1, subEnd + 1).join('\n'); const regex = new RegExp('\\b' + id.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'i'); if (regex.test(before) || regex.test(after)) return true; return false;
@@ -319,11 +334,11 @@ try {
       const diagnostics = [];
       const symbols = entry.symbols || [];
       for (const s of symbols) {
-        const others = docManager.global.getByExactName(s.name).filter((o) => o.file !== s.file);
-        if (others.length > 0) {
-          const symLen = Math.max(s.name.length, 1);
-          diagnostics.push({ severity: 2, range: { start: { line: s.line, character: 0 }, end: { line: s.line, character: symLen } }, message: `Symbol '${s.name}' is also defined in other files (${others.map((o) => o.file).join(', ')})`, source: 'b4x-lsp' });
-        }
+        const B4A_STANDARD_SUBS = new Set(["process_globals","globals","class_globals","initialize","activity_create","activity_resume","activity_pause","activity_click","activity_longclick","activity_touch","activity_keypress","activity_keyup","activity_windowfocuschanged","activity_actionbarhomeclick","activity_permissionresult","activity_permissonresult","ime_heightchanged","create_menu","service_create","service_start","service_destroy","msgbox_result","inputlist_result","inputmap_result","b4xpage_created","b4xpage_appear","b4xpage_disappear","b4xpage_resize","b4xpage_closerequest","b4xpage_backkeypressed","b4xpage_keyboardstatechanged","b4xpage_permissionresult","b4xpage_menuclick","b4xpage_foreground","b4xpage_background","b4xpage_iconifiedchanged","mainform_closerequest","mainform_closed","mainform_focuschanged","mainform_iconifiedchanged","mainform_resize","b4ipage_appear","b4ipage_disappear","b4ipage_resize","b4ipage_barbuttonclick","b4ipage_keyboardstatechanged","application_start"]);
+      const symNameLower = (s.name || '').toLowerCase();
+      if (B4A_STANDARD_SUBS.has(symNameLower) || symNameLower.startsWith('b4xpage_')) {
+        continue;
+      }
       }
       for (const s of symbols.filter((x) => x.kind === 'type')) {
         const lines = (entry.text || '').split(/\r?\n/);
@@ -357,6 +372,9 @@ try {
   connection.listen();
   // LSP server started - silent for production
 } catch (err) {
-  // Failed to start LSP server - silently exit
+  // Failed to start LSP server â€” log the error before exiting so the
+  // client-side can at least see what went wrong in developer tools.
+  process.stderr.write('B4X LSP server failed to start: ' + (err && (err.stack || err.message || String(err))) + '\n');
   process.exit(1);
 }
+

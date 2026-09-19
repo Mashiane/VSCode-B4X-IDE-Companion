@@ -1,0 +1,3 @@
+Sub Main
+  Log "Hello"
+End Sub

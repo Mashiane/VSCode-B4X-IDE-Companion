@@ -1,24 +1,148 @@
-node_modules/**
+# === Source / build tooling (never ship) ===
 .git/**
 .github/**
+.agents/**
+.agents
 .vscode/**
+.scripts/**
 src/**
+scripts/**
+test/**
+data/**
+data/**
+tsconfig.json
+tsconfig.tests.json
+.gitignore
 **/*.ts
 **/*.map
-server/test-client*
-server/test-client-requests.js
+__mocks__/**
+*.bak
+
+# === Git worktrees (isolated dev workspaces) ===
+.worktrees/
+
+# === Backup folders (never ship) ===
+_backups/
+backup-manifest.json
+
+# === AI/agent config directories (never ship) ===
+.kilo/**
+.kilocode/**
+.agent/**
+.claude/**
+.deepseek/**
+.remember/**
+
+# === Server source — bundled into dist/server.js and dist/workerTask.js ===
+server/**
+
+# === Stale compiled artifacts (no corresponding .ts source) ===
+dist/src/apiIndex.js
+dist/src/apiIndex.js.map
+dist/src/b4aProjectScanner.js
+dist/src/b4aProjectScanner.js.map
+
+# === TypeScript-compiled output (esbuild bundle is the entry point) ===
+dist/src/**
+dist/**/*.js.map
+dist/tsconfig.tsbuildinfo
+
+# === Server test helpers ===
 tests/**
-server/indexer/tests/**
 dist/scripts/tests/**
+
+# === Extracted VSIX directories (never ship) ===
+b4x-intellisense-*/
+
+# === Logs / temp files ===
+b4x-log-*.txt
 *.log
 npm-debug.log
 .DS_Store
-images/*.svg
-README.md
+*.vsix
+
+# === B4X project/sample files (never ship) ===
+jMashProjectProfile.b4j/
+
+# === B4X binary/intermediate files (never ship) ===
+**/*.bjl
+**/*.bal
+**/*.bil
+
+# === All node_modules excluded — esbuild bundles everything needed into dist/ ===
+node_modules/**
+
+# === Documentation files ===
+docs/**
+!docs/manual.md
 CONTRIBUTING.md
 PUBLISHING.md
-CHANGELOG.md
-b4a_libraries.txt
-# Explicitly include all .ps1 files
-!src/*.ps1
- # Removed .scripts PS1 inclusion per request (create_backup.ps1 not referenced)
+NEW_FEATURES.md
+CORE_XML_AUDIT.md
+PRIMITIVE_TYPES_FIX.md
+PLATFORM_BUILDERS.md
+TESTING.md
+B4X_LANGUAGE_GRAMMAR.md
+
+# === Analysis / research artifacts ===
+analyze_core*.py
+check_boolean*.py
+extract_*.py
+extract_pdf*.py
+pdf_vs_core_comparison.md
+all_platforms_shortname_analysis.json
+QWEN.md
+deep-analysis.js
+
+# === Dev documentation (never ship) ===
+ARCHITECTURE.md
+MARKETPLACE_RELEASE_NOTES.md
+RELEASE_NOTES.md
+
+# === Dev cache / index files (never ship) ===
+.b4x-index.json
+mempalace.yaml
+entities.json
+
+# === Images (except required icons) ===
+emulator-screenshot.png
+images/*.svg
+images/icon.png
+images/icon.svg
+images/screenshot-1.svg
+images/hero.svg
+images/feature-comparison.svg
+images/48x48.png
+
+# === Understanding folder (library reference files - not needed at runtime) ===
+Understanding/**
+
+# === Python scripts ===
+**/*.py
+
+# === PowerShell helper scripts (dev-only by default) ===
+**/*.ps1
+
+# === Runtime PowerShell scripts (must ship — referenced by extension.ts) ===
+!src/install.ps1
+!src/startemulator.ps1
+!src/backup.ps1
+!src/gif.ps1
+!src/screenshot.ps1
+
+# === Logs folder ===
+logs/**
+
+# === Qwen AI context ===
+.qwen/**
+
+# === Lock file ===
+package-lock.json
+
+# === Backup/version folders (never ship) ===
+LastWorkingVersion*/
+LastWorkingVersion/**
+
+# === External sample repos (never ship) ===
+vscode-extension-samples*/
+MCP/**

@@ -6,11 +6,12 @@
  */
 
 import * as vscode from 'vscode';
+import { WorkspaceClassStore, XmlLibraryStore } from './types';
 
 export class B4xImplementationProvider implements vscode.ImplementationProvider {
   constructor(
-    private readonly workspaceClasses: any,
-    private readonly xmlLibraries: any,
+    private readonly workspaceClasses: WorkspaceClassStore,
+    private readonly xmlLibraries: XmlLibraryStore,
   ) {}
 
   provideImplementation(

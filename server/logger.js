@@ -8,7 +8,6 @@ const logFile = path.join(logDir, 'server.log');
 // Async write queue with bounded size to avoid memory leaks
 const MAX_QUEUE_SIZE = 5000; // drop oldest entries if queue exceeds this
 let writeQueue = [];
-let droppedCount = 0;
 let isWriting = false;
 
 async function drainQueue() {
@@ -19,7 +18,7 @@ async function drainQueue() {
     try {
       await fs.promises.appendFile(logFile, entry, { encoding: 'utf8' });
     } catch (e) {
-      // Logger failed to write - silently continue
+      console.error('Logger failed to write', e && e.stack ? e.stack : e);
     }
   }
   isWriting = false;
@@ -42,11 +41,7 @@ function write(obj) {
 
   // Bounded queue: drop oldest entries if full
   if (writeQueue.length >= MAX_QUEUE_SIZE) {
-    const dropped = writeQueue.splice(0, writeQueue.length - MAX_QUEUE_SIZE + 1);
-    droppedCount += dropped.length;
-    if (droppedCount % 100 === 1 && droppedCount > 100) {
-      // Only log after significant drops, but suppress output
-    }
+    writeQueue.splice(0, writeQueue.length - MAX_QUEUE_SIZE + 1);
   }
   writeQueue.push(line);
   // Drain asynchronously without blocking the caller
@@ -57,6 +52,7 @@ function timestamp() { return new Date().toISOString(); }
 
 function log(level, message, meta) {
   const entry = { ts: timestamp(), level, message, meta: meta || null, pid: process.pid };
+  try { console.log(`[${entry.ts}] ${level.toUpperCase()}: ${message}`, meta || ''); } catch (_) {}
   write(entry);
 }
 

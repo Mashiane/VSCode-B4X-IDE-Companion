@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 
 import { B4xClass, B4xEventDef, B4xFieldDef, B4xMethod, B4xParameter, B4xProperty } from './types';
 import { libraryIndex } from './storage/libraryIndexSqlite';
+import { B4xDocument, LightweightDocument } from './lightweightDocument';
 
 export interface XmlMethodInfo extends B4xMethod {
   location: vscode.Location;
@@ -37,23 +38,25 @@ export class XmlLibraryStore {
   }
 
   public async replaceXmlFiles(filePaths: string[]): Promise<void> {
-    console.log(`[B4X TRACE ${new Date().toISOString()}] XmlLibraryStore.replaceXmlFiles.enter -> ${filePaths.length} files`);
     this.loadedFiles = [...filePaths];
     this.classesByName.clear();
 
     // Deduplicate by lowercase key but preserve original casing of the path
-    // so that vscode.Uri.file() receives the real filesystem path (case-sensitive on Linux/macOS).
+    // so that file paths are case-sensitive on Linux/macOS.
     const seen = new Map<string, string>();
     for (const fp of filePaths) {
       const key = fp.toLowerCase();
       if (!seen.has(key)) seen.set(key, fp);
     }
     const uniquePaths = [...seen.values()];
-    await Promise.all(uniquePaths.map(async (filePath) => {
-      const document = await Promise.resolve(vscode.workspace.openTextDocument(vscode.Uri.file(filePath))).catch(() => undefined);
+
+    // Use LightweightDocument instead of openTextDocument to avoid VS Code's
+    // heavyweight document lifecycle for files that only need text scanning.
+    for (const filePath of uniquePaths) {
+      const document = LightweightDocument.fromFile(filePath);
       if (!document) {
         console.warn('B4X: failed to open XML library document, skipped:', filePath);
-        return;
+        continue;
       }
       const parsed = parseXmlLibraryDocument(document);
       const toPersist: any[] = [];
@@ -69,13 +72,11 @@ export class XmlLibraryStore {
       } catch (err) {
         console.warn('B4X: failed to persist xml classes for', filePath, err);
       }
-    }));
+    }
     try {
       const count = this.classesByName.size;
-      const samples = [...this.classesByName.keys()].slice(0, 10);
-      console.log(`B4X: XmlLibraryStore.replaceXmlFiles -> loaded ${count} classes from xml files. samples=`, samples);
     } catch (err) {
-      console.warn('B4X: XmlLibraryStore.replaceXmlFiles logging failed', err);
+      // XmlLibraryStore.replaceXmlFiles logging failed
     }
   }
 
@@ -164,7 +165,7 @@ export class XmlLibraryStore {
   }
 }
 
-export function parseXmlLibraryDocument(document: vscode.TextDocument): XmlClassInfo[] {
+export function parseXmlLibraryDocument(document: B4xDocument): XmlClassInfo[] {
   const text = document.getText();
   const classes: XmlClassInfo[] = [];
 
@@ -217,18 +218,18 @@ export function parseXmlLibraryDocument(document: vscode.TextDocument): XmlClass
     const events = parseEvents(document, block, blockStart);
 
     // Normalize String2 → String in all member types
-    normalizeMemberTypes(methods);
-    normalizeMemberTypes(properties);
-    normalizeMemberTypes(fields);
+    const normalizedMethods = normalizeMemberTypes(methods);
+    const normalizedProperties = normalizeMemberTypes(properties);
+    const normalizedFields = normalizeMemberTypes(fields);
 
     classes.push({
       name: effectiveName,
       libraryName: path.basename(document.uri.fsPath, path.extname(document.uri.fsPath)),
       doc: comment || undefined,
       description: comment || undefined,
-      methods,
-      properties,
-      fields,
+      methods: normalizedMethods,
+      properties: normalizedProperties,
+      fields: normalizedFields,
       events,
       version: libraryVersion,
       filePath: document.uri.fsPath,
@@ -249,7 +250,7 @@ function deriveShortName(fqdn: string): string {
   return lastDot >= 0 ? fqdn.substring(lastDot + 1) : fqdn;
 }
 
-function parseMethods(document: vscode.TextDocument, classBlock: string, blockStart: number, text: string): XmlMethodInfo[] {
+function parseMethods(document: B4xDocument, classBlock: string, blockStart: number, text: string): XmlMethodInfo[] {
   const result: XmlMethodInfo[] = [];
   const methodPattern = /<method>([\s\S]*?)<\/method>/g;
   let match: RegExpExecArray | null;
@@ -289,7 +290,7 @@ function parseMethods(document: vscode.TextDocument, classBlock: string, blockSt
   return result;
 }
 
-function parseProperties(document: vscode.TextDocument, classBlock: string, blockStart: number, text: string): XmlPropertyInfo[] {
+function parseProperties(document: B4xDocument, classBlock: string, blockStart: number, text: string): XmlPropertyInfo[] {
   const result: XmlPropertyInfo[] = [];
   const propertyPattern = /<property>([\s\S]*?)<\/property>/g;
   let match: RegExpExecArray | null;
@@ -326,7 +327,7 @@ function parseProperties(document: vscode.TextDocument, classBlock: string, bloc
   return result;
 }
 
-function parseFields(document: vscode.TextDocument, classBlock: string, blockStart: number, text: string): XmlFieldInfo[] {
+function parseFields(document: B4xDocument, classBlock: string, blockStart: number, text: string): XmlFieldInfo[] {
   const result: XmlFieldInfo[] = [];
   const fieldPattern = /<field>([\s\S]*?)<\/field>/g;
   let match: RegExpExecArray | null;
@@ -359,7 +360,7 @@ function parseFields(document: vscode.TextDocument, classBlock: string, blockSta
 
 /** Parse `<event>` elements from a class block.
  *  Format in Core.xml: <event>Click(Position As Int, Value As Object)</event> */
-function parseEvents(document: vscode.TextDocument, classBlock: string, blockStart: number): B4xEventDef[] {
+function parseEvents(document: B4xDocument, classBlock: string, blockStart: number): B4xEventDef[] {
   const result: B4xEventDef[] = [];
   const eventPattern = /<event>([\s\S]*?)<\/event>/gi;
   let match: RegExpExecArray | null;
@@ -427,42 +428,49 @@ function decodeXml(value: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&')
     // Numeric decimal entities: &#60; → <
     .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(Number.parseInt(num, 10)))
     // Numeric hex entities: &#x3C; → <
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)))
+    // &amp; must be decoded LAST to prevent double-decode of e.g. &amp;#60; → &#60; → <
+    .replace(/&amp;/g, '&');
 }
 
 /**
  * Normalize B4A internal type names to user-facing names across all member types.
+ * Returns new objects with normalized values instead of mutating in place.
  * String2 → String is the primary normalization, but this can be extended for
  * other internal→user mappings in the future.
  */
-function normalizeMemberTypes(members: Array<{type?: string; rawType?: string; returnType?: string; rawReturnType?: string; params?: Array<{type: string; rawType?: string}>} | {type?: string; rawType?: string}>): void {
-  for (const member of members) {
-    if ('returnType' in member && member.returnType) {
-      if (member.returnType === 'String2') member.returnType = 'String';
-      if (member.rawReturnType === 'String2') member.rawReturnType = 'String';
+function normalizeMemberTypes(members: any[]): any[] {
+  return members.map(member => {
+    const m: any = { ...member };
+
+    if ('returnType' in m && m.returnType) {
+      if (m.returnType === 'String2') m.returnType = 'String';
+      if (m.rawReturnType === 'String2') m.rawReturnType = 'String';
     }
-    if ('type' in member && member.type) {
-      if (member.type === 'String2') member.type = 'String';
-      if (member.rawType === 'String2') member.rawType = 'String';
+    if ('type' in m && m.type) {
+      if (m.type === 'String2') m.type = 'String';
+      if (m.rawType === 'String2') m.rawType = 'String';
     }
-    if ('params' in member && member.params) {
-      for (const param of member.params) {
-        if (param.type === 'String2') param.type = 'String';
-        if (param.rawType === 'String2') param.rawType = 'String';
-      }
+    if ('params' in m && m.params) {
+      m.params = m.params.map((param: any) => {
+        const p = { ...param };
+        if (p.type === 'String2') p.type = 'String';
+        if (p.rawType === 'String2') p.rawType = 'String';
+        return p;
+      });
     }
-    // Also normalize signature strings that may contain String2
-    if ('signature' in member && typeof (member as any).signature === 'string') {
-      (member as any).signature = (member as any).signature.replace(/\bString2\b/g, 'String');
+    if ('signature' in m && typeof m.signature === 'string') {
+      m.signature = m.signature.replace(/\bString2\b/g, 'String');
     }
-    if ('rawSignature' in member && typeof (member as any).rawSignature === 'string') {
-      (member as any).rawSignature = (member as any).rawSignature.replace(/\bString2\b/g, 'String');
+    if ('rawSignature' in m && typeof m.rawSignature === 'string') {
+      m.rawSignature = m.rawSignature.replace(/\bString2\b/g, 'String');
     }
-  }
+
+    return m;
+  });
 }
 
 /**
@@ -488,11 +496,13 @@ export function formatDocToMarkdown(raw: string | undefined): string | undefined
   text = text.replace(/<b>(.*?)<\/b>/gi, '**$1**');
   // Convert <link>title|url</link> tags
   text = text.replace(/<link>([^|]+)\|([^<]+)<\/link>/gi, '[$1]($2)');
+  // Strip any remaining HTML tags to prevent injection in MarkdownString
+  text = text.replace(/<\/?[a-zA-Z][^>]*>/g, '');
   return text.trim();
 }
 
 function createTagLocation(
-  document: vscode.TextDocument,
+  document: B4xDocument,
   text: string,
   tagName: string,
   value: string,
@@ -519,7 +529,7 @@ function escapeForTagSearch(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function createLineLocation(document: vscode.TextDocument, lineNumber: number): vscode.Location {
+function createLineLocation(document: B4xDocument, lineNumber: number): vscode.Location {
   const line = document.lineAt(lineNumber);
   return new vscode.Location(document.uri, line.range);
 }

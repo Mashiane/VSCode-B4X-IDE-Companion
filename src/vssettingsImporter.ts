@@ -208,8 +208,8 @@ export async function importVsSettingsFile(uri?: vscode.Uri, autoApply: boolean 
         // Convert tokenColors into textMateRules entries
         const newRules = tokenColors.map((r: any) => ({ name: r.name, scope: r.scope, settings: r.settings }));
         const combinedRules = [...existingRules, ...newRules];
-        existingTokenCustom.textMateRules = combinedRules;
-        await workbenchCfg.update('editor.tokenColorCustomizations', existingTokenCustom, vscode.ConfigurationTarget.Workspace);
+        const updatedTokenCustom = { ...existingTokenCustom, textMateRules: combinedRules };
+        await workbenchCfg.update('editor.tokenColorCustomizations', updatedTokenCustom, vscode.ConfigurationTarget.Workspace);
 
         if (!autoApply) {
           void vscode.window.showInformationMessage(`B4X: Applied generated theme colors to workspace settings.`);

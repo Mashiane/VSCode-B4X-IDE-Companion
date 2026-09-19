@@ -1,0 +1,19 @@
+parts {
+  device {
+    display {
+      width 720
+      height 1612
+    }
+  }
+}
+layouts {
+  portrait {
+    width 720
+    height 1612
+    part1 {
+      name device
+      x 0
+      y 0
+    }
+  }
+}

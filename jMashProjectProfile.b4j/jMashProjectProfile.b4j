@@ -1,0 +1,1103 @@
+﻿Version=4.2
+AppType=JavaFX
+NumberOfModules=3
+Module1=jMash
+Module2=KeyValueStore
+Module3=DBUtils
+Build1=Default,b4j.example
+NumberOfFiles=13
+File1=book.png
+File2=book_open.png
+File3=code.png
+File4=file.png
+File5=library.png
+File6=module.png
+File7=projectexplorer.db
+File8=report.png
+File9=sub.png
+File10=VB-50.png
+File11=vMain.bjl
+File12=vProfile.bjl
+File13=vProjectTree.bjl
+NumberOfLibraries=9
+Library1=jcore
+Library2=jfx
+Library3=jsql
+Library4=jrandomaccessfile
+Library5=javaobject
+Library6=jcustomtoast
+Library7=json
+Library8=archiver
+Library9=jrldialogs8
+@EndOfDesignText@
+#Region  Project Attributes 
+	#MainFormWidth: 900
+	#MainFormHeight: 600 
+	#AdditionalJar: sqlite-jdbc-3.7.2
+	'#VirtualMachineArgs: -Xms1024m -Xmx1024m
+#End Region
+
+Sub Process_Globals
+	Private fx As JFX
+	Private MainForm As Form
+	Private treeProject As TreeView
+	Private splitMain As SplitPane
+	Private MenuBar1 As MenuBar
+	Private kvs As KeyValueStore
+	Private fPath As String
+	Private fName As String
+	Private fPathName As String
+	Private project_closed,project_open As Image
+	Private fContents As List
+	Private modules As List
+	Private libraries As List
+	Private files As List
+	Private rsTot As Int
+	Private rsCnt As Int
+	Private rsStr As String
+	Private codePos As Int
+	Private eqPos As Int
+	Private prefix As String
+	Private suffix As String
+	Private treeEvent As String
+	Private fileExtensions As Map
+	Private libImg As Image
+	Private filImg As Image
+	Private modImg As Image
+	Private subImg As Image
+	Private rptImg As Image
+	Private b4asc As String
+	Private b4ail As String
+	Private b4ael As String
+	Private b4isc As String
+	Private b4iil As String
+	Private b4iel As String
+	Private b4jsc As String
+	Private b4jil As String
+	Private b4jel As String
+	Private mPos As Int
+	Private m As Menu
+	Private menus As Map
+	Private ext As String
+	Private fileTypes As Map
+	Private fileLocations As Map
+	Private existingFiles As String
+	Private fileDateL As String
+	Private fileDateS As String
+	Private fileSize As Long
+	Private fileLines As Long
+	Private dbRecords As List
+	Private subNames As List
+	Private savedFiles As String
+	Private filStr As String
+	Private extFile As String
+	Private libxml As String
+	Private wProfile As WebView
+	Private projectProfile As String
+	Private prjName As String
+	Private prjLines As Int
+	Private prjSubs As Int
+	Private prjFS As Long
+	Private ac As Archiver
+	Private Dlg As Dialogs8
+	Private libExternal As Boolean
+End Sub
+
+Sub AppStart (Form1 As Form, Args() As String)
+	MainForm = Form1
+	MainForm.SetFormStyle("UNIFIED")
+	MainForm.RootPane.LoadLayout("vMain")
+	splitMain.LoadLayout("vProjectTree")
+	splitMain.LoadLayout("vProfile")
+	'splitMain.SetSizeLimits(0, 0, 400)
+	' set the splitpane and treeview
+	kvs.Initialize(File.DirApp, "jMashProjectProfile")
+	MainForm.Title = "jMashProjectProfile"
+	MainForm.BackColor = fx.Colors.white
+	jMash.Form_SetIcon(MainForm,"VB-50.png")
+	MainForm.Show
+	jMash.Form_CenterOnScreen(MainForm)
+	Dlg.Initialize
+	project_closed.Initialize(File.DirAssets,"book.png")
+	project_open.Initialize(File.DirAssets,"book_open.png")
+	libImg.Initialize(File.DirAssets,"library.png")
+	filImg.Initialize(File.DirAssets,"file.png")
+	modImg.Initialize(File.DirAssets,"module.png")
+	subImg.Initialize(File.DirAssets, "sub.png")
+	rptImg.Initialize(File.DirAssets, "report.png")
+	jMash.OpenDatabase("projectexplorer.db", True)
+	File.MakeDir(File.DirApp, "Reports")
+	File.MakeDir(File.DirApp, "Distribution")
+	File.MakeDir(File.DirApp, "Profiles")
+	treeEvent = "treeProject"
+	' update menu
+	UpdateMenus
+	AddAllRecentItems
+End Sub
+
+' update the menu items and reflect the specified folders
+Sub UpdateMenus
+	' get menus
+	b4asc = kvs.GetSimple("b4asc")
+	b4ael = kvs.GetSimple("b4ael")
+	b4ail = kvs.GetSimple("b4ail")
+	b4isc = kvs.GetSimple("b4isc")
+	b4iel = kvs.GetSimple("b4iel")
+	b4iil = kvs.GetSimple("b4iil")
+	b4jsc = kvs.GetSimple("b4jsc")
+	b4jel = kvs.GetSimple("b4jel")
+	b4jil = kvs.GetSimple("b4jil")
+	
+	menus.Initialize
+	jMash.CollectMenuItems(menus, MenuBar1.Menus)
+	'b4a menu
+	If b4asc.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4aSC")
+		mi.Text = "b4a Shared Code (" & b4asc & ")"
+	End If
+	If b4ael.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4aEL")
+		mi.Text = "b4a External Libraries (" & b4ael & ")"
+	End If
+	If b4ail.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4aIL")
+		mi.Text = "b4a Internal Libraries (" & b4ail & ")"
+	End If
+	'b4i menu
+		If b4isc.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4iSC")
+		mi.Text = "b4i Shared Code (" & b4isc & ")"
+	End If
+	If b4iel.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4iEL")
+		mi.Text = "b4i External Libraries (" & b4iel & ")"
+	End If
+	If b4iil.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4iIL")
+		mi.Text = "b4i Internal Libraries (" & b4iil & ")"
+	End If
+	'b4j menu
+	If b4jsc.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4jSC")
+		mi.Text = "b4j Shared Code (" & b4jsc & ")"
+	End If
+	If b4jel.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4jEL")
+		mi.Text = "b4j External Libraries (" & b4jel & ")"
+	End If
+	If b4jil.Length > 0 Then
+		Dim mi As MenuItem = menus.Get("mnub4jIL")
+		mi.Text = "b4j Internal Libraries (" & b4jil & ")"
+	End If
+End Sub
+
+Sub treeProject_MouseClicked (EventData As MouseEvent)
+	
+End Sub
+
+Sub MenuBar1_Action
+	Dim mi As MenuItem = Sender
+	Select Case mi.Tag
+	Case "mnuDistribute"
+		' zip the complete project profile to a file for distribution
+		If prjName.Length = 0 Then
+			Dlg.ErrorDialog("Distribute Error", "A project has not been opened yet. You have to open a project first to distribute it.","")
+			Return 
+		End If
+		DistributeProject
+	Case "mnub4aIL"
+		LibraryUpdate("b4ail", "Select b4a Internal Library Folder")
+	Case "mnub4aEL"
+		LibraryUpdate("b4ael", "Select b4a External Library Folder")
+	Case "mnub4aSC"
+		LibraryUpdate("b4asc", "Select b4a Shared Code Folder")
+	Case "mnub4iIL"
+		LibraryUpdate("b4iil", "Select b4i Internal Library Folder")
+	Case "mnub4iEL"
+		LibraryUpdate("b4iel", "Select b4i External Library Folder")
+	Case "mnub4iSC"
+		LibraryUpdate("b4isc", "Select b4i Shared Code Folder")
+	Case "mnub4jIL"
+		LibraryUpdate("b4jil", "Select b4j Internal Libraries Folder")
+	Case "mnub4jEL"
+		LibraryUpdate("b4jel", "Select b4j External Libraries Folder")
+	Case "mnub4jSC"
+		LibraryUpdate("b4jsc", "Select b4j Shared Code Folder")
+	Case "mnuOpenProject"
+		' open the project file
+		Dim fc As FileChooser	
+		' get the path that was saved before
+		fPath = kvs.GetSimple("path")
+		fc.Initialize                         ' Init! Do not forget
+  		If fPath.Length = 0 Then
+			' there is no path, use current path
+			fc.InitialDirectory = File.DirApp     ' Set starting folder
+		Else
+			' set last path
+			fc.InitialDirectory = fPath
+		End If
+		fc.Title = "Select a Project File"
+		fc.SetExtensionFilter("Project",Array As String("*.b4j","*.b4i","*.b4a"))
+		fPathName = fc.ShowOpen(MainForm)
+		If fPathName.length = 0 Then Return
+  		' get path from file name
+		fPath = jMash.getFilePath(fPathName)
+		' get file name
+		fName = jMash.getFileName(fPathName)
+		' save these for later retrieval
+		kvs.PutSimple("path", fPath)
+		kvs.PutSimple("file", fName)
+		kvs.PutSimple("fullpath", fPathName)
+		' update recent folders list
+		SaveRecentItems(fPath,fName)
+		AddRecentItem(0, fPathName, fName)
+		OpenProject(fPathName, fName)
+	Case "mnuCheckVariables"
+		' check variables
+	Case "mnuExit"
+		ExitApplication
+	End Select
+End Sub
+
+' ask as user for a folder to link for internal, external and shared folders
+Sub LibraryUpdate(skey As String, stitle As String)
+		Dim dc As DirectoryChooser
+  		dc.Initialize
+  		fPath = kvs.GetSimple(skey)
+		If fPath.Length = 0 Then
+			' there is no path, use current path
+			dc.InitialDirectory = File.DirApp     ' Set starting folder
+		Else
+			' set last path
+			dc.InitialDirectory = fPath
+		End If
+		dc.Title = stitle
+		fPath = dc.Show(MainForm)
+		If fPath.length = 0 Then Return
+  		' save these for later retrieval
+		kvs.PutSimple(skey, fPath)
+		UpdateMenus
+End Sub
+
+' open a project and profile it
+Sub OpenProject(sFilePath As String, sFName As String)
+	MainForm.Title = "jMashProjectProfile: " & jMash.GetFileName(sFilePath)
+	' clear the table
+	DBUtils.ClearTable(jMash.jSQL,"projectfiles")
+	' will hold the records to add to the database
+	dbRecords.Initialize 
+	' will store the file types, eg class, activity, code
+	fileTypes.Initialize
+	' the actual file location, could be different as some are shared
+	fileLocations.Initialize  
+	' get the library paths
+	b4asc = kvs.GetSimple("b4asc")
+	b4ael = kvs.GetSimple("b4ael")
+	b4ail = kvs.GetSimple("b4ail")
+	b4isc = kvs.GetSimple("b4isc")
+	b4iel = kvs.GetSimple("b4iel")
+	b4iil = kvs.GetSimple("b4iil")
+	b4jsc = kvs.GetSimple("b4jsc")
+	b4jel = kvs.GetSimple("b4jel")
+	b4jil = kvs.GetSimple("b4jil")
+	' get the file extension
+	' depending on the file extension, check if libraries, shared code, external libraries are provided
+	ext = jMash.GetFileExt(fPathName)
+	prjName = jMash.GetFileName(fPathName)
+	' create the respective Reports folder
+	File.MakeDir(File.DirApp, "Reports\" & prjName)
+	File.MakeDir(File.DirApp, "Profiles\" & prjName)
+	prjLines = 0
+	prjSubs= 0
+	prjFS = 0
+	Select Case ext
+	Case "b4a"
+		If b4ail.Length = 0 Then
+			jMash.Error(Dlg,"b4a Internal Libraries Folder", "The b4a Internal Libraries Folder has not been specified. Please go to the b4a menu and configure this folder.")
+			Return
+		End If
+		If b4ael.Length = 0 Then
+			jMash.Error(Dlg,"b4a External Libraries Folder", "The b4a External Libraries Folder has not been specified. Please go to the b4a menu and configure this folder.")
+			Return
+		End If
+		If b4asc.Length = 0 Then
+			jMash.Error(Dlg,"b4a Shared Code Folder", "The b4a Shared Code Folder has not been specified. Please go to the b4a menu and configure this folder.")
+			Return
+		End If
+	Case "b4i"
+		If b4iil.Length = 0 Then
+			jMash.Error(Dlg,"b4i Internal Libraries Folder", "The b4i Internal Libraries Folder has not been specified. Please go to the b4i menu and configure this folder.")
+			Return
+		End If
+		If b4iel.Length = 0 Then
+			jMash.Error(Dlg,"b4i External Libraries Folder", "The b4i External Libraries Folder has not been specified. Please go to the b4i menu and configure this folder.")
+			Return
+		End If
+		If b4isc.Length = 0 Then
+			jMash.Error(Dlg,"b4i Shared Code Folder", "The b4i Shared Code Folder has not been specified. Please go to the b4i menu and configure this folder.")
+			Return
+		End If
+	Case "b4j"
+		If b4jil.Length = 0 Then
+			jMash.Error(Dlg,"b4j Internal Libraries Folder", "The b4j Internal Libraries Folder has not been specified. Please go to the b4j menu and configure this folder.")
+			Return
+		End If
+		If b4jel.Length = 0 Then
+			jMash.Error(Dlg,"b4j External Libraries Folder", "The b4j External Libraries Folder has not been specified. Please go to the b4j menu and configure this folder.")
+			Return
+		End If
+		If b4jsc.Length = 0 Then
+			jMash.Error(Dlg,"b4j Shared Code Folder", "The b4j Shared Code Folder has not been specified. Please go to the b4j menu and configure this folder.")
+			Return
+		End If
+	End Select
+	' get the file contents of the project file
+	fContents = File.ReadList("", sFilePath)
+	' initialize file extensions
+	fileExtensions.Initialize 
+	' we will store modules here
+	modules.Initialize
+	' we will store libraries here
+	libraries.Initialize 
+	' we will stor the files here
+	files.initialize
+	' clear the treeview
+	treeProject.Root.Children.clear
+	' project node
+	Dim pi As TreeItem
+	pi.Initialize(treeEvent,  prjName)
+	pi.Image = project_closed
+	' module node
+	Dim mn As TreeItem
+	mn.Initialize(treeEvent, "Modules")
+	mn.Image = modImg   
+	' file node
+	Dim fil As TreeItem
+	fil.Initialize(treeEvent, "Files")
+	fil.Image = filImg   
+	' libraris node
+	Dim lib As TreeItem
+	lib.Initialize(treeEvent, "Libraries")
+	lib.Image = libImg   
+	
+	Dim rp As TreeItem
+	rp.Initialize(treeEvent, "Report")
+	rp.Image = rptImg   
+	
+	' get the path of the project, we need to link the other files properly
+	Dim tmpPath As String
+	Dim tmpFile As String
+	Dim tmpThere As Boolean
+	Dim codeFileType As String
+	Dim dbAction As Map
+	tmpPath = jMash.GetFilePath(sFilePath)	
+	
+	' go through each line in the project file
+	codePos = -1
+	rsTot = fContents.Size - 1
+	For rsCnt = 0 To rsTot
+		rsStr = fContents.Get(rsCnt)
+		' where is equal
+		eqPos = jMash.InStr(rsStr,"=")
+		If eqPos <> -1 Then
+			' process modules
+			If jMash.StartsWith(rsStr,"Module") = True Then
+				' get the module name
+				suffix = jMash.MvField(rsStr,2,"=")
+				' append .bas to the name
+				suffix = suffix & ".bas"
+				modules.Add(suffix)
+				' define the actual file
+				tmpFile = tmpPath & "\" & suffix
+				' check if the file exists in the project folder
+				tmpThere = File.Exists("",tmpFile)
+				' the file is not there, check the shared folders
+				Select Case tmpThere
+				Case True
+					fileLocations.Put(suffix, tmpFile)
+				Case False 
+					Select Case ext
+					Case "b4a"
+						tmpFile = b4asc & "\" & suffix
+					Case "b4i"
+						tmpFile = b4isc & "\" & suffix
+					Case "b4j"
+						tmpFile = b4jsc & "\" & suffix
+					End Select
+					fileLocations.Put(suffix, tmpFile)	
+				End Select
+				' get the type of code file this is and save for later reference i.e. activity, staticcode,class
+				codeFileType = GetCodeFileType(tmpFile)
+				' get all subroutine names
+				subNames = GetSubNames(tmpFile)
+				' count the number of lines in the file
+				fileLines = GetFileLines(tmpFile)
+				' for tree grouping
+				If fileTypes.ContainsKey(codeFileType) = True Then
+					existingFiles = fileTypes.Get(codeFileType)
+					existingFiles = existingFiles & ";" & tmpFile
+				Else
+					existingFiles = tmpFile
+				End If 
+				fileTypes.Put(codeFileType,existingFiles)
+				' save file details to the db for reporting
+				fileDateL = File.LastModified("",tmpFile)
+				fileDateS = DateTime.Date(fileDateL)
+				fileSize = File.Size("", tmpFile)  
+				' update the projectfiles table
+				dbAction.Initialize
+				dbAction.Put("filePath",tmpFile)
+				dbAction.Put("filename", suffix)
+				dbAction.Put("filetype", codeFileType)
+				dbAction.Put("filesize", fileSize)
+				dbAction.Put("filemoddate",fileDateS)
+				dbAction.Put("subs", subNames.size)
+				dbAction.Put("lines",fileLines)
+				dbAction.Put("maincategory","Modules")
+				dbRecords.Add(dbAction)
+				prjLines = prjLines + fileLines
+				prjSubs= prjSubs + subNames.size
+				prjFS = prjFS + fileSize
+			End If
+			' process files, we will process them later
+			If jMash.StartsWith(rsStr,"File") = True Then
+				' get the file name
+				suffix = jMash.MvField(rsStr,2,"=")
+				files.Add(suffix)
+				tmpFile = tmpPath & "\Files\" & suffix
+				' save the file extension for later grouping
+				extFile = jMash.GetFileExt(tmpFile)
+				If extFile.Length > 0 Then
+					If fileExtensions.ContainsKey(extFile) = True Then
+						savedFiles = fileExtensions.Get(extFile)
+						savedFiles = savedFiles & ";" & suffix 
+					Else
+						savedFiles = suffix
+					End If
+					fileExtensions.Put(extFile,savedFiles)  
+				End If
+				fileDateL = File.LastModified("",tmpFile)
+				fileDateS = DateTime.Date(fileDateL)
+				fileSize = File.Size("", tmpFile)
+				fileLines = 0
+				Select Case extFile
+				Case "css"
+					fileLines = GetFileLines(tmpFile) 
+				Case "js"
+					fileLines = GetFileLines(tmpFile) 
+				Case "php"
+					fileLines = GetFileLines(tmpFile) 
+				Case "txt"
+					fileLines = GetFileLines(tmpFile) 
+				End Select
+				' update the projectfiles table
+				dbAction.Initialize
+				dbAction.Put("filePath",tmpFile)
+				dbAction.Put("filename", suffix)
+				dbAction.Put("filetype", extFile)
+				dbAction.Put("filesize", fileSize)
+				dbAction.Put("filemoddate",fileDateS)
+				dbAction.Put("subs","0")
+				dbAction.Put("lines",fileLines)
+				dbAction.Put("maincategory", "Files")
+				dbRecords.Add(dbAction)
+				prjLines = prjLines + fileLines
+				prjFS = prjFS + fileSize 
+			End If
+			' process libraries
+			If jMash.StartsWith(rsStr,"Library") = True Then
+				' get the library name
+				suffix = jMash.MvField(rsStr,2,"=")
+				libraries.Add(suffix)
+				' add module to the tree
+				Dim nLib As TreeItem
+				nLib.Initialize(treeEvent,suffix)
+				nLib.Image = libImg   
+	     		lib.Children.Add(nLib)
+				' get library details
+				suffix = suffix & ".jar"
+				' the file is not there, check the shared folder
+				libExternal = False
+				Select Case ext
+				Case "b4a"
+					tmpFile = b4ail & "\" & suffix
+					libxml = tmpFile.Replace(".jar",".xml")
+					tmpThere = File.Exists("",tmpFile)
+					If tmpThere = False Then
+						tmpFile = b4ael & "\" & suffix
+						libExternal = True
+					End If
+					tmpThere = File.Exists("", libxml)
+					If tmpThere = False Then
+						libxml = b4ael & "\" & suffix
+						libxml = libxml.Replace(".jar",".xml")
+					End If
+				Case "b4i"
+					tmpFile = b4iil & "\" & suffix
+					libxml = tmpFile.Replace(".jar",".xml")
+					tmpThere = File.Exists("",tmpFile)
+					If tmpThere = False Then
+						tmpFile = b4iel & "\" & suffix
+						libExternal = True
+					End If
+					tmpThere = File.Exists("", libxml)
+					If tmpThere = False Then
+						libxml = b4iel & "\" & suffix
+						libxml = libxml.Replace(".jar",".xml")
+					End If
+				Case "b4j"
+					tmpFile = b4jil & "\" & suffix
+					libxml = tmpFile.Replace(".jar",".xml")
+					tmpThere = File.Exists("",tmpFile)
+					If tmpThere = False Then
+						tmpFile = b4jel & "\" & suffix
+						libExternal = True
+					End If
+					tmpThere = File.Exists("", libxml)
+					If tmpThere = False Then
+						libxml = b4jel & "\" & suffix
+						libxml = libxml.Replace(".jar",".xml")
+					End If
+				End Select
+				fileDateL = File.LastModified("",tmpFile)
+				fileDateS = DateTime.Date(fileDateL)
+				fileSize = File.Size("", tmpFile)  
+				filStr = File.GetName(tmpFile)
+				' update the projectfiles table
+				dbAction.Initialize
+				dbAction.Put("filePath",tmpFile)
+				dbAction.Put("filename", filStr)
+				dbAction.Put("filetype", "Library")
+				dbAction.Put("filesize", fileSize)
+				dbAction.Put("filemoddate",fileDateS)
+				dbAction.Put("subs","0")
+				dbAction.Put("lines","0")
+				dbAction.Put("maincategory","Libraries")
+				If libExternal = True Then
+					dbAction.Put("location", "External")
+				Else
+					dbAction.Put("location", "Internal")
+				End If
+				dbRecords.Add(dbAction)
+				'prjLines = prjLines + fileLines
+				'prjSubs= prjSubs + subNames.size
+				prjFS = prjFS + fileSize
+				' find the xml file for the library and add it
+				tmpThere = File.Exists("", libxml)
+				If tmpThere = True Then
+					fileDateL = File.LastModified("",libxml)
+					fileDateS = DateTime.Date(fileDateL)
+					fileSize = File.Size("", libxml)  
+					filStr = File.GetName(libxml)
+					fileLines = GetFileLines(libxml)
+					dbAction.Initialize
+					dbAction.Put("filePath",libxml)
+					dbAction.Put("filename", filStr)
+					dbAction.Put("filetype", "Library XML")
+					dbAction.Put("filesize", fileSize)
+					dbAction.Put("filemoddate",fileDateS)
+					dbAction.Put("subs","0")
+					dbAction.Put("lines",fileLines)
+					dbAction.Put("maincategory","Libraries")
+					dbRecords.Add(dbAction)
+					prjLines = prjLines + fileLines
+					'prjSubs= prjSubs + subNames.size
+					prjFS = prjFS + fileSize
+				End If
+			End If			
+		End If
+		If rsStr = "@EndOfDesignText@" Then codePos = rsCnt + 1
+		If codePos <> -1 Then Exit
+	Next
+	
+	' loop through each extension
+	Dim extTot As Int
+	Dim extCnt As Int
+	Dim extStr As String
+	Dim extFiles As String
+	Dim spFiles() As String
+	Dim filTot As Int
+	Dim filCnt As Int
+	Dim basFile As String
+	Dim subTot As Int
+	Dim subCnt As Int
+	Dim subStr As String
+	Dim subKey As String
+	' process the modules
+	extTot = fileTypes.Size - 1
+	For extCnt = 0 To extTot
+		extStr = fileTypes.GetKeyAt(extCnt)
+		extFiles = fileTypes.GetValueAt(extCnt)
+		spFiles = jMash.StrParse(";", extFiles)
+		spFiles = jMash.SortStringArray(spFiles)
+		' add module to the tree
+		Dim module As TreeItem
+		module.Initialize(treeEvent,extStr)
+		module.Image = modImg   
+		filTot = spFiles.Length - 1
+		For filCnt = 0 To filTot
+			filStr = spFiles(filCnt)
+			subNames = GetSubNames(filStr)
+			subNames.Sort(True) 
+			basFile = File.GetName(filStr)
+			Dim fileNode As TreeItem
+			fileNode.Initialize(treeEvent,basFile)
+			fileNode.Image = filImg   
+			
+			' load the subs
+			subTot = subNames.Size - 1 
+			For subCnt = 0 To subTot
+				subStr = subNames.Get(subCnt)
+				subKey = basFile.Replace(".bas","")
+				subKey = subKey & "." & subStr
+				Dim subNode As TreeItem
+				subNode.Initialize(treeEvent,subStr)
+				subNode.Image = subImg 
+				fileNode.Children.Add(subNode) 
+		  	Next
+			module.Children.Add(fileNode) 
+		Next
+		mn.Children.Add(module)   
+	Next
+	
+	
+	
+	' process the files
+	extTot = fileExtensions.Size - 1
+	For extCnt = 0 To extTot
+		extStr = fileExtensions.GetKeyAt(extCnt) 
+		extFiles = fileExtensions.GetValueAt(extCnt)
+		spFiles = jMash.StrParse(";",extFiles)
+		spFiles = jMash.SortStringArray(spFiles)
+		' add extension to the tree
+		Dim extNode As TreeItem
+		extNode.Initialize(treeEvent,extStr)
+		extNode.Image = filImg   
+		' add each file to the extension
+		filTot = spFiles.Length - 1
+		For filCnt = 0 To filTot
+			filStr = spFiles(filCnt)
+			Dim fileNode As TreeItem
+			fileNode.Initialize(treeEvent,filStr)
+			fileNode.Image = filImg   
+			extNode.Children.Add(fileNode) 
+			
+		Next
+		fil.Children.Add(extNode)  
+	Next
+	' add modules to the project node
+	pi.Children.Add(mn) 
+	' add files to project node
+	pi.Children.Add(fil)
+	' add libraries to project node
+	pi.Children.Add(lib)
+	' add report tree item
+	pi.Children.Add(rp)
+	' add project node to the treeview 
+	treeProject.Root.Children.Add(pi) 'add the father to the root
+	pi.Expanded = True
+	'add records to the database
+	' add the project file
+	tmpFile = sFilePath
+	filStr = File.GetName(tmpFile)
+	fileDateL = File.LastModified("",tmpFile)
+	fileDateS = DateTime.Date(fileDateL)
+	fileSize = File.Size("", tmpFile)
+	fileLines = GetFileLines(tmpFile)
+	subNames = GetSubNames(tmpFile)
+	prjLines = prjLines + fileLines
+	prjSubs= prjSubs + subNames.size
+	prjFS = prjFS + fileSize
+	' update the projectfiles table
+	dbAction.Initialize
+	dbAction.Put("filePath",tmpFile)
+	dbAction.Put("filename", filStr)
+	dbAction.Put("filetype", ext)
+	dbAction.Put("filesize", prjFS)
+	dbAction.Put("filemoddate",fileDateS)
+	dbAction.Put("subs",prjSubs)
+	dbAction.Put("lines", prjLines)
+	dbAction.Put("maincategory", filStr)
+				
+	dbRecords.Add(dbAction) 
+		
+	DBUtils.InsertMaps(jMash.jSQl,"projectfiles",dbRecords) 
+	' show the report
+	projectProfile = "select filetype as [File Type], count(*) as [Counted],sum(filesize) as [File Sizes], sum(subs) as [Soub Routines], sum(lines) as Lines from projectfiles group by filetype"
+	projectProfile = DBUtils.ExecuteHtml(jMash.jsql,projectProfile,Null,-1)
+	wProfile.LoadHtml(projectProfile) 
+End Sub
+
+
+'Adds a separator menu item
+'Example call: AddMenuSeparator(MenuBar1, 0) where 0 is the first menu item
+Sub AddMenuSeparator(mb As MenuBar, menuidx As Int)
+    Dim joSepMi As JavaObject
+    joSepMi.InitializeNewInstance("javafx.scene.control.SeparatorMenuItem", Null)
+    Dim mnu As Menu = mb.Menus.Get(menuidx)
+    mnu.MenuItems.Add(joSepMi)
+End Sub
+
+'Not implemented yet, will be later today.
+Sub RemoveRecentItems(menuidx As Int, recentfile As String)
+    Dim filesmenu As Menu = MenuBar1.Menus.Get(menuidx)
+    For i = 0 To filesmenu.MenuItems.Size - 1
+        Dim mi As MenuItem = filesmenu.MenuItems.Get(i)
+        'handle null entries, like the separators
+        If mi.Text <> Null Then 
+            If mi.Text.EqualsIgnoreCase(recentfile) Then 
+                filesmenu.MenuItems.RemoveAt(i)
+                Exit
+            End If
+        End If
+    Next
+End Sub
+
+'Handle the recent files menu actions
+'from rwblinn, worked perfectly
+Sub RecentFilesMenu_Action
+    Dim recent As MenuItem =Sender
+	fPathName = recent.tag 
+	fName = jMash.GetFileBasename(fPathName)
+	OpenProject(fPathName, fName)
+End Sub
+
+'from rwblinn
+'Adds a separator menu item
+'Example call: AddMenuSeparator(MenuBar1, 0) where 0 is the first menu item
+Sub RecentItemsAddSeparator(menuidx As Int)
+    Dim joSepMi As JavaObject
+    joSepMi.InitializeNewInstance("javafx.scene.control.SeparatorMenuItem", Null)
+    Dim mnu As Menu = MenuBar1.Menus.Get(menuidx)
+    mnu.MenuItems.Add(joSepMi)
+End Sub
+
+'This subroutine takes the file either opened or saved and writes it to
+'the recent items file. I add the file path and name to a Map to make sure
+'I don't have duplicates without specifically testing each one. I use a pipe
+'delimeter as that's what I'm used to. I want the flexibility of changing how
+'I express the file name as well. Either that, or I could also extract the
+'filepath and filename, I did what I was comfortable with for now, to get it working.
+Sub SaveRecentItems(strPath As String, strFile As String)
+    Dim recentItemsMap As Map
+    recentItemsMap.Initialize
+    recentItemsMap.Put(strPath & "|" & strFile, "1")
+    If File.IsDirectory(File.dirapp, "recentitems.lib") = False Then
+        If File.Exists(File.dirapp, "recentitems.lib") = True Then
+            Dim recentItemsList As List
+            recentItemsList.Initialize
+            recentItemsList = ReadRecentItemsList
+            If recentItemsList.Size > 0 Or recentItemsList.Get(0) <> "" Then
+                For i = 0 To recentItemsList.Size - 1
+                    recentItemsMap.Put(recentItemsList.Get(i), "1")
+                Next
+               
+            End If
+        End If
+    End If
+    Dim listWrite As List
+    listWrite.Initialize
+    For Each mapkey As String In recentItemsMap.Keys
+        listWrite.Add(mapkey)
+    Next
+    File.WriteList(File.DirApp, "recentitems.lib", listWrite)
+End Sub
+
+'Just retrieves the list as I do that in a couple of places. Inherent laziness.
+Sub ReadRecentItemsList() As List
+    Dim recentList As List
+    recentList.Initialize
+    If File.IsDirectory(File.DirApp, "recentitems.lib") = False Then
+        If File.Exists(File.DirApp, "recentitems.lib") = True Then
+            recentList = File.ReadList(File.DirApp, "recentitems.lib")
+        End If
+    End If
+    Return recentList
+End Sub
+
+'When the app loads, I clean up the list by removing anyting the user has deleted. I'll be adding a "Delete Profile" later today.
+Sub cleanupRecentItems
+    Dim listWrite As List
+    listWrite.Initialize
+    listWrite.Clear
+    Dim recentFilesList As List
+    recentFilesList.Initialize
+    recentFilesList = ReadRecentItemsList
+    Dim strLine As String
+    Dim strLinePath As String
+    Dim strLineName As String
+    For i = 0 To recentFilesList.Size - 1
+       If recentFilesList.Get(i) <> "" Then
+            strLine = recentFilesList.Get(i)
+            If strLine.IndexOf("|") > 0 Then
+                strLinePath = strLine.SubString2(0, strLine.IndexOf("|"))
+                strLineName = strLine.SubString(strLine.IndexOf("|") + 1)
+                If strLinePath <> "" And strLineName <> "" Then
+                    If File.Exists(strLinePath, strLineName) = True Then
+                        listWrite.Add(strLine)
+                    End If
+                End If
+            End If
+       End If
+    Next
+	If listWrite.Size = 0 Then
+	    File.Delete(File.DirApp, "recentitems.lib")
+    Else 
+	   File.WriteList(File.DirApp, "recentitems.lib", listWrite)
+    End If
+End Sub
+
+'This is what saves the last file opened or created to the recent items list.
+Sub SaveLastFile(strPath As String, strFile As String)
+    Dim listWrite As List
+    listWrite.Initialize
+    listWrite.Add(strPath & "|" & strFile)
+    File.WriteList(File.DirApp, "lastfile.lib", listWrite)
+End Sub
+
+'From rwblinn, with slight mods
+Sub AddRecentItem(menuidx As Int, strPathName As String, strFileName As String)
+	Dim mFound As Int
+	Dim mTag As String
+	Dim fPath As String
+	fPath = strPathName.ToLowerCase
+	' we need to search for the menu first 
+    Dim filesmenu As Menu = MenuBar1.Menus.Get(menuidx)
+    mFound = -1
+	For Each mi As MenuItem In filesmenu.MenuItems
+		mTag = mi.Tag
+		mTag = mTag.ToLowerCase 
+		If mTag = fPath Then
+			mFound = 1
+			Exit 
+		End If
+	Next
+	' the menu was not found
+	If mFound = -1 Then
+		Dim recentfilemenuitem As MenuItem
+    	recentfilemenuitem.Initialize(strFileName,"recentfilesmenu")
+    	recentfilemenuitem.Tag = strPathName
+    	recentfilemenuitem.Text = strFileName
+    	filesmenu.MenuItems.Add(recentfilemenuitem)
+	End If
+End Sub
+
+'From rwblinn, with a lot of mods. It reads in the recent items from the file then adds them to the menu.
+Sub AddAllRecentItems
+    'Call this from AppInit
+    cleanupRecentItems
+    Dim recentFilesList As List
+    recentFilesList.Initialize
+    recentFilesList = ReadRecentItemsList
+    Dim subMenuRecentFileNames(recentFilesList.Size + 1) As String
+    Dim subMenuRecentFilePath(recentFilesList.Size + 1) As String
+    Dim strLine As String
+    Dim strLinePath As String
+    Dim strLineName As String
+    For i = 0 To recentFilesList.Size - 1
+       If recentFilesList.Get(i) <> "" Then
+            strLine = recentFilesList.Get(i)
+            If strLine.IndexOf("|") > 0 Then
+                strLinePath = strLine.SubString2(0, strLine.IndexOf("|"))
+                strLineName = strLine.SubString(strLine.IndexOf("|") + 1)
+                If strLinePath <> "" And strLineName <> "" Then
+                    If File.Exists(strLinePath, strLineName) = True Then
+                       subMenuRecentFileNames(i) = strLineName
+                        subMenuRecentFilePath(i) = File.Combine(strLinePath, strLineName)
+                    End If
+                End If
+           
+            End If
+       End If
+    Next 
+    Dim recentFiles As List 
+    recentFiles.Initialize
+    recentFiles.AddAll(subMenuRecentFileNames)
+    'Add a separator first
+    RecentItemsAddSeparator(0)
+    'Add the list of files
+    For i = 0 To recentFiles.Size - 1
+        If subMenuRecentFilePath(i) <> "" And subMenuRecentFileNames(i) <> "" Then
+           AddRecentItem(0, subMenuRecentFilePath(i), subMenuRecentFileNames(i))
+        End If
+    Next
+End Sub
+
+
+' get the type of file the code file is
+private Sub GetCodeFileType(sPath As String) As String
+	If File.Exists("", sPath) = False Then Return "Unknown" 
+	Dim fContent As List
+	Dim fFirstLine As String
+	Dim fType As String
+	' read the file contents
+	fContent = File.ReadList("", sPath)
+	' read the first line of the file
+	fFirstLine = fContent.Get(0)
+	fType = jMash.MvField(fFirstLine,2,"=")
+	Return fType
+End Sub
+
+
+private Sub GetFileLines(sPath As String) As Long
+	If File.Exists("", sPath) = False Then Return 0
+	Dim fContent As List
+	fContent = File.ReadList("", sPath)
+	Return fContent.Size
+End Sub
+
+private Sub GetSubNames(sPath As String) As List
+	Dim subList As List
+	Dim fCnt As Int
+	Dim fTot As Int
+	Dim fStr As String
+	Dim fContent As List
+	' to store the sub names
+	subList.Initialize
+	fContent = File.ReadList("", sPath)
+	fTot = fContent.Size - 1
+	For fCnt = 0 To fTot
+		fStr = fContent.Get(fCnt)
+		fStr = CleanSubName(fStr)
+		If fStr.Length > 0 Then subList.Add(fStr)
+	Next	
+	Return subList
+End Sub
+
+Sub CleanSubName(sSubName As String) As String
+	Dim fLine As String
+	Dim fStr As String
+	Dim bcPos As Int
+	fLine = sSubName.ToLowerCase
+	fLine = fLine.trim
+	If jMash.StartsWith(fLine, "sub ") = True Then 
+		fStr = sSubName
+		fStr = fStr.Replace("sub ", "")
+		fStr = fStr.Replace("Sub ", "")
+		bcPos = fStr.IndexOf("(")
+		If bcPos <> -1 Then
+			fStr = jMash.Left(fStr,bcPos) 
+		End If
+		Return fStr
+	End If
+	If jMash.StartsWith(fLine, "private sub ") = True Then 
+		fStr = sSubName
+		fStr = fStr.Replace("private sub ", "")
+		fStr = fStr.Replace("Private Sub ", "")
+		fStr = fStr.Replace("private Sub ", "")
+		fStr = fStr.Replace("Private sub ", "")
+		bcPos = fStr.IndexOf("(")
+		If bcPos <> -1 Then
+			fStr = jMash.Left(fStr,bcPos) 
+		End If
+		Return fStr
+	End If
+	If jMash.StartsWith(fLine, "public sub ") = True Then 
+		fStr = sSubName
+		fStr = fStr.Replace("public sub ", "")
+		fStr = fStr.Replace("Public Sub ", "")
+		fStr = fStr.Replace("public Sub ", "")
+		fStr = fStr.Replace("Public sub ", "")
+		bcPos = fStr.IndexOf("(")
+		If bcPos <> -1 Then
+			fStr = jMash.Left(fStr,bcPos) 
+		End If
+		Return fStr
+	End If
+	Return ""
+End Sub
+
+Sub DistributeProject()
+	' clear the folder if it exists
+	jMash.DeleteFolderRecursive(File.DirApp & "\Profiles\" & prjName)
+	' create a directory to hold the contents
+	File.MakeDir(File.DirApp, "Profiles\" & prjName)
+	File.MakeDir(File.DirApp, "Profiles\" & prjName & "\Libraries")
+	File.MakeDir(File.DirApp, "Profiles\" & prjName & "\Files")
+	Dim ml As List
+	Dim mTot As Int
+	Dim mCnt As Int
+	Dim mI As Map
+	Dim fp As String
+	Dim mc As String
+	Dim tFile As String
+	Dim loc As String
+	' process the files for distribution
+	ml = DBUtils.ExecuteMaps(jMash.jSQL,"select filePath,maincategory,location from projectfiles order by filePath",Null)
+	mTot = ml.Size - 1
+	For mCnt = 0 To mTot
+		mI = ml.Get(mCnt)
+		fp = mI.Get("filepath")
+		mc = mI.Get("maincategory")
+		loc = mI.Get("location")
+		tFile = File.GetName(fp)
+		Select Case mc
+		Case "Modules"
+			tFile = File.DirApp & "\Profiles\" & prjName & "\" & tFile
+			File.Copy("",fp,"",tFile) 
+		Case "Files"
+			tFile = File.DirApp & "\Profiles\" & prjName & "\Files\" & tFile
+			File.Copy("",fp,"",tFile) 
+		Case "Libraries"
+			' only distribute external libraries
+			If loc = "External" Then
+				tFile = File.DirApp & "\Profiles\" & prjName & "\Libraries\" & tFile
+				File.Copy("",fp,"",tFile) 
+			End If
+		Case Else
+			tFile = File.DirApp & "\Profiles\" & prjName & "\" & tFile
+			File.Copy("",fp,"",tFile) 
+		End Select
+	Next
+	ac.AsyncZipFolder(File.DirApp & "\Profiles\" & prjName, File.DirApp & "\Distribution" ,prjName & ".zip", "zipfolder")
+End Sub
+
+public Sub zipfolder_ZipDone(CompletedWithoutError As Boolean, NbOfFiles As Int)
+	Dlg.InformationDialog("Distribute " & NbOfFiles & " Files" , "Distribution file complete","The distribution file has been compressed and is available in Objects folder.")
+	jMash.DeleteFolderRecursive(File.DirApp & "\Profiles\" & prjName)
+End Sub
+
+Sub treeProject_SelectedItemChanged(SelectedItem As TreeItem)
+	If SelectedItem.IsInitialized = False Then Return
+	Dim rpt As String
+	Dim rptMain As String
+	rptMain = SelectedItem.text
+	wProfile.LoadHtml("") 
+	Select Case rptMain
+	Case "Report"
+		' show the report
+		projectProfile = "select filetype as [File Type], count(*) as [Counted],sum(filesize) as [File Sizes], sum(subs) as [Soub Routines], sum(lines) as Lines from projectfiles group by filetype"
+		projectProfile = DBUtils.ExecuteHtml(jMash.jsql,projectProfile,Null,-1)
+		wProfile.LoadHtml(projectProfile)
+		File.WriteString(File.DirApp, "Reports\" & prjName & "\" & prjName & " Report.html", projectProfile)  
+	Case prjName
+		rpt = "select filename as [File Name], filetype as [File Type], subs as [Sub Routines], lines as [Code Lines], filesize as [File Size], filemoddate as [Last Modified] from projectfiles where maincategory = '" & rptMain & "' order by filename;"
+		rpt = DBUtils.ExecuteHtml(jMash.jsql,rpt,Null,-1)
+		wProfile.LoadHtml(rpt) 
+		File.WriteString(File.DirApp, "Reports\" & prjName & "\" & prjName & ".html", rpt)  
+	Case "Files"
+		rpt = "select filename as [File Name], filetype as [File Type], lines as [Code Lines], filesize as [File Size], filemoddate as [Last Modified] from projectfiles where maincategory = '" & rptMain & "' order by filename;"
+		rpt = DBUtils.ExecuteHtml(jMash.jsql,rpt,Null,-1)
+		wProfile.LoadHtml(rpt) 
+		File.WriteString(File.DirApp, "Reports\" & prjName & "\" & prjName & " Files.html", rpt)  
+	Case "Libraries"
+		rpt = "select filename as [File Name], filetype as [File Type], filesize as [File Size], filemoddate as [Last Modified] from projectfiles where maincategory = '" & rptMain & "' order by filename;"
+		rpt = DBUtils.ExecuteHtml(jMash.jsql,rpt,Null,-1)
+		wProfile.LoadHtml(rpt) 
+		File.WriteString(File.DirApp, "Reports\" & prjName & "\" & prjName & " Libraries.html", rpt)  
+	Case "Modules"
+		rpt = "select filename as [File Name], filetype as [File Type], subs as [Sub Routines], lines as [Code Lines], filesize as [File Size], filemoddate as [Last Modified] from projectfiles where maincategory = '" & rptMain & "' order by filename;"
+		rpt = DBUtils.ExecuteHtml(jMash.jsql,rpt,Null,-1)
+		wProfile.LoadHtml(rpt) 
+		File.WriteString(File.DirApp, "Reports\" & prjName & "\" & prjName & " Modules.html", rpt)  
+	Case Else
+		If jMash.EndsWith(rptMain, ".bas") = True Then
+			wProfile.LoadHtml("") 
+		Else 
+			rpt = "select filename as [File Name], filetype as [File Type], subs as [Sub Routines], lines as [Code Lines], filesize as [File Size], filemoddate as [Last Modified] from projectfiles where filetype = '" & rptMain & "' order by filename;"
+			rpt = DBUtils.ExecuteHtml(jMash.jsql,rpt,Null,-1)
+			wProfile.LoadHtml(rpt)
+			File.WriteString(File.DirApp, "Reports\" & prjName & "\" & prjName & " " & rptMain & ".html", rpt)  
+		End If 
+	End Select
+End Sub

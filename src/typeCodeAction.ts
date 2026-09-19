@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 
 export class TypeCodeActionProvider implements vscode.CodeActionProvider {
   public static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
@@ -20,17 +20,21 @@ export class TypeCodeActionProvider implements vscode.CodeActionProvider {
       moveToClass.diagnostics = [diag];
       moveToClass.isPreferred = true;
 
+      const moveToGlobals = new vscode.CodeAction('Move Type into Sub Globals', vscode.CodeActionKind.QuickFix);
+      moveToGlobals.edit = this.createMoveEdit(document, diag.range, 'globals');
+      moveToGlobals.diagnostics = [diag];
+
       const moveToProcess = new vscode.CodeAction('Move Type into Sub Process_Globals', vscode.CodeActionKind.QuickFix);
       moveToProcess.edit = this.createMoveEdit(document, diag.range, 'process');
       moveToProcess.diagnostics = [diag];
 
-      actions.push(moveToClass, moveToProcess);
+      actions.push(moveToClass, moveToGlobals, moveToProcess);
     }
 
     return actions;
   }
 
-  private createMoveEdit(document: vscode.TextDocument, typeRange: vscode.Range, targetScope: 'class' | 'process'): vscode.WorkspaceEdit {
+  private createMoveEdit(document: vscode.TextDocument, typeRange: vscode.Range, targetScope: 'class' | 'globals' | 'process'): vscode.WorkspaceEdit {
     const edit = new vscode.WorkspaceEdit();
     const typeText = document.getText(typeRange);
 
@@ -38,7 +42,12 @@ export class TypeCodeActionProvider implements vscode.CodeActionProvider {
     edit.delete(document.uri, typeRange);
 
     // Find target sub
-    const targetRegex = targetScope === 'class' ? /^\s*Sub\s+Class_Globals\b/i : /^\s*Sub\s+Process_Globals\b/i;
+    const targetRegex = targetScope === 'class'
+      ? /^\s*Sub\s+Class_Globals\b/i
+      : targetScope === 'globals'
+      ? /^\s*Sub\s+Globals\b/i
+      : /^\s*Sub\s+Process_Globals\b/i;
+
     let insertPos: vscode.Position | undefined;
     for (let i = 0; i < document.lineCount; i += 1) {
       const line = document.lineAt(i).text.replace(/'.*$/, '').trim();
@@ -70,7 +79,8 @@ export class TypeCodeActionProvider implements vscode.CodeActionProvider {
       insertPos = new vscode.Position(top, 0);
 
       // prepare wrapper
-      const wrapper = `Sub ${targetScope === 'class' ? 'Class_Globals' : 'Process_Globals'}\n${typeText}\nEnd Sub\n\n`;
+      const subName = targetScope === 'class' ? 'Class_Globals' : targetScope === 'globals' ? 'Globals' : 'Process_Globals';
+      const wrapper = `Sub ${subName}\n${typeText}\nEnd Sub\n\n`;
       edit.insert(document.uri, insertPos, wrapper);
       return edit;
     }

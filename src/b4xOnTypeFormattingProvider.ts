@@ -4,34 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-
-// Multi-word keywords must be matched before single words to avoid partial fixes
-const MULTI_KEYWORDS: Array<{ pattern: RegExp; replacement: string }> = [
-  { pattern: /\bend\s+sub\b/gi, replacement: 'End Sub' },
-  { pattern: /\bend\s+if\b/gi, replacement: 'End If' },
-  { pattern: /\bend\s+select\b/gi, replacement: 'End Select' },
-  { pattern: /\bend\s+try\b/gi, replacement: 'End Try' },
-  { pattern: /\bend\s+type\b/gi, replacement: 'End Type' },
-  { pattern: /\belse\s+if\b/gi, replacement: 'Else If' },
-  { pattern: /\bcase\s+else\b/gi, replacement: 'Case Else' },
-  { pattern: /\bfor\s+each\b/gi, replacement: 'For Each' },
-  { pattern: /\bclass_globals\b/gi, replacement: 'Class_Globals' },
-  { pattern: /\bprocess_globals\b/gi, replacement: 'Process_Globals' },
-];
-
-// Single-word keyword casings
-const KEYWORD_CASING: Record<string, string> = {
-  'sub': 'Sub', 'end': 'End', 'if': 'If', 'then': 'Then',
-  'else': 'Else', 'for': 'For', 'to': 'To', 'step': 'Step',
-  'next': 'Next', 'do': 'Do', 'loop': 'Loop', 'while': 'While',
-  'until': 'Until', 'select': 'Select', 'case': 'Case',
-  'try': 'Try', 'catch': 'Catch', 'return': 'Return',
-  'continue': 'Continue', 'exit': 'Exit', 'dim': 'Dim',
-  'as': 'As', 'private': 'Private', 'public': 'Public',
-  'type': 'Type', 'and': 'And', 'or': 'Or', 'not': 'Not',
-  'mod': 'Mod', 'true': 'True', 'false': 'False', 'null': 'Null',
-  'in': 'In', 'region': 'Region',
-};
+import { MULTI_KEYWORDS, KEYWORD_CASING, applyKeywordCasing } from './utils/b4xKeywords';
 
 export class B4xOnTypeFormattingProvider implements vscode.OnTypeFormattingEditProvider {
   provideOnTypeFormattingEdits(
@@ -63,8 +36,9 @@ export class B4xOnTypeFormattingProvider implements vscode.OnTypeFormattingEditP
     // 1. Check if the word near cursor is a single-word keyword
     const lowerWord = word.toLowerCase();
     const correctCasing = KEYWORD_CASING[lowerWord];
-    if (correctCasing && word !== correctCasing) {
-      edits.push(new vscode.TextEdit(wordRange, correctCasing));
+    const replacement = correctCasing ? applyKeywordCasing(word, correctCasing) : undefined;
+    if (replacement && word !== replacement) {
+      edits.push(new vscode.TextEdit(wordRange, replacement));
     }
 
     // 2. Check if multi-word keywords overlap with the cursor position

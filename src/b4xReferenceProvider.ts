@@ -8,11 +8,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { WorkspaceClassStore, XmlLibraryStore } from './types';
 
 export class B4xReferenceProvider implements vscode.ReferenceProvider {
   constructor(
-    private readonly workspaceClasses: any, // WorkspaceClassStore
-    private readonly xmlLibraries: any, // XmlLibraryStore
+    private readonly workspaceClasses: WorkspaceClassStore,
+    private readonly xmlLibraries: XmlLibraryStore,
   ) {}
 
   provideReferences(

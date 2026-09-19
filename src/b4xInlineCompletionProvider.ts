@@ -6,11 +6,12 @@
 
 import * as vscode from 'vscode';
 import { getLinePrefix, stripComment } from './b4xDocParser';
+import { WorkspaceClassStore, XmlLibraryStore } from './types';
 
 export class B4xInlineCompletionItemProvider implements vscode.InlineCompletionItemProvider {
   constructor(
-    private readonly workspaceClasses: any,
-    private readonly xmlLibraries: any,
+    private readonly workspaceClasses: WorkspaceClassStore,
+    private readonly xmlLibraries: XmlLibraryStore,
   ) {}
 
   provideInlineCompletionItems(

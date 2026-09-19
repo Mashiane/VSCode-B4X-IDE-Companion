@@ -18,13 +18,19 @@ class GlobalSymbolTable {
     this._fileToIds = new Map(); // filePath -> Set<symbolId>
   }
 
-  applyFileSymbols(fileSymbols) {
-    if (!fileSymbols || fileSymbols.length === 0) return;
+  applyFileSymbols(fileSymbols, filePath) {
+    // If fileSymbols is empty/missing, we still need to remove any stale
+    // entries for this file from the global table (e.g., after clearing
+    // a file's contents). Without this, ghost completions persist.
+    if (!fileSymbols || fileSymbols.length === 0) {
+      if (filePath) this.removeFile(filePath);
+      return;
+    }
 
-    const filePath = fileSymbols[0].file;
+    const resolvedPath = filePath || fileSymbols[0].file;
 
     // Step 1: Remove previous entries for this file from byName and trie
-    const oldIds = this._fileToIds.get(filePath);
+    const oldIds = this._fileToIds.get(resolvedPath);
     if (oldIds) {
       for (const id of oldIds) {
         const sym = this._symbolStore.get(id);
@@ -42,7 +48,7 @@ class GlobalSymbolTable {
           this._symbolStore.delete(id);
         }
       }
-      this._fileToIds.delete(filePath);
+      this._fileToIds.delete(resolvedPath);
     }
 
     // Step 2: Add new entries to byName, trie, and symbol store
@@ -58,7 +64,7 @@ class GlobalSymbolTable {
       this.byName.get(key).push(symWithId);
       this._insertIntoTrie(key, id);
     }
-    this._fileToIds.set(filePath, newIds);
+    this._fileToIds.set(resolvedPath, newIds);
   }
 
   removeFile(filePath) {

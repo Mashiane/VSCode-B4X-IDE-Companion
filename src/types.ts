@@ -119,3 +119,21 @@ export function normalizeTypeName(value: string | undefined): string | undefined
 
   return `${simpleName}${arraySuffix}`;
 }
+
+/** Minimal interface for the workspace class store used by providers. */
+export interface WorkspaceClassStore {
+  getDefinitionByName(name: string | undefined): import('./workspaceClassIndex').WorkspaceClassInfo | undefined;
+  findClassesByPrefix(prefix: string): import('./workspaceClassIndex').WorkspaceClassInfo[];
+  getAllClasses(): import('./workspaceClassIndex').WorkspaceClassInfo[];
+  findMemberByName(memberName: string): { owner: import('./workspaceClassIndex').WorkspaceClassInfo; kind: 'method' | 'property'; item: import('./workspaceClassIndex').WorkspaceMethodInfo | import('./workspaceClassIndex').WorkspacePropertyInfo } | undefined;
+  resolveMemberType(ownerType: string | undefined, memberName: string): string | undefined;
+}
+
+/** Minimal interface for the XML library store used by providers. */
+export interface XmlLibraryStore {
+  getClassByName(name: string | undefined): import('./xmlLibraryIndex').XmlClassInfo | undefined;
+  findClassesByPrefix(prefix: string): import('./xmlLibraryIndex').XmlClassInfo[];
+  getAllClasses(): import('./xmlLibraryIndex').XmlClassInfo[];
+  findMemberByName(memberName: string): { owner: import('./xmlLibraryIndex').XmlClassInfo; kind: 'method' | 'property'; item: import('./xmlLibraryIndex').XmlMethodInfo | import('./xmlLibraryIndex').XmlPropertyInfo } | undefined;
+  resolveMemberType(ownerType: string | undefined, memberName: string): string | undefined;
+}
