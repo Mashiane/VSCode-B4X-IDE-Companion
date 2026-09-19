@@ -8,24 +8,25 @@
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
-2. [Opening a Project](#opening-a-project)
-3. [IntelliSense Features](#intellisense-features)
-4. [Code Navigation](#code-navigation)
-5. [Code Formatting](#code-formatting)
-6. [Syntax & Editing](#syntax--editing)
-7. [Diagnostics & Code Actions](#diagnostics--code-actions)
-8. [Extract Method](#extract-method)
-9. [Project Statistics](#project-statistics)
-10. [Build & Install](#build--install)
-11. [Theme Import](#theme-import)
-12. [Device Capture](#device-capture)
-13. [Snippets](#snippets)
-14. [Context Menu](#context-menu)
-15. [Commands Reference](#commands-reference)
-16. [Settings Reference](#settings-reference)
-17. [Platform Discovery](#platform-discovery)
-18. [Troubleshooting](#troubleshooting)
-19. [Keyboard Shortcuts](#keyboard-shortcuts)
+2. [Views](#views)
+3. [Opening a Project](#opening-a-project)
+4. [IntelliSense Features](#intellisense-features)
+5. [Code Navigation](#code-navigation)
+6. [Code Formatting](#code-formatting)
+7. [Syntax & Editing](#syntax--editing)
+8. [Diagnostics & Code Actions](#diagnostics--code-actions)
+9. [Extract Method](#extract-method)
+10. [Project Statistics](#project-statistics)
+11. [Build & Install](#build--install)
+12. [Theme Import](#theme-import)
+13. [Device Capture](#device-capture)
+14. [Snippets](#snippets)
+15. [Context Menu](#context-menu)
+16. [Commands Reference](#commands-reference)
+17. [Settings Reference](#settings-reference)
+18. [Platform Discovery](#platform-discovery)
+19. [Troubleshooting](#troubleshooting)
+20. [Keyboard Shortcuts](#keyboard-shortcuts)
 
 ---
 
@@ -41,15 +42,26 @@
 ### Installation
 
 1. Install from the VS Code Marketplace, or load a `.vsix` file manually via **Extensions → ⋯ → Install from VSIX…**
-2. The extension activates automatically when VS Code starts or when you open a `.bas` / `.b4x` file.
+2. The extension activates on VS Code startup, or when you open a B4X file, run a B4X command, or open the Projects / Libraries views.
+
+### Activation Gate
+
+The extension does nothing unless the open workspace actually contains a B4X project. On every activation it scans each workspace folder (root files, then one level of subfolders such as `B4A/`, `B4i/`, `B4J/`, `B4R/`) for a platform file: `.b4a`, `.b4i`, `.b4j`, or `.b4r`.
+
+- **No platform file found:** the extension stays idle. No library catalog download, no providers, no template scan, no status bar activity. Only **Open B4X Project** and **New B4X Project from Template** remain available, and they explain that a B4X folder must be opened first.
+- **Platform file found:** the found file becomes the remembered last-opened project (overwriting any stale value from a previous window), and full activation continues below.
+
+This applies identically to **Open Folder**, **Open Recent (Folder)**, starting VS Code with a last folder, and late extension activation with a folder already open.
 
 ### First Launch
 
-On first activation the extension:
+Once a platform file is confirmed, activation continues:
 
+- Loads the library catalog (cached, then remote index plus version data)
 - Scans `%APPDATA%\Anywhere Software\` for platform INI files (B4A, B4i, B4J, B4R)
 - Discovers library folders from each INI configuration
 - Sets up the persistent SQLite library cache
+- Pre-scans platform library folders for `.b4xtemplate` files
 
 No manual path configuration is required for standard installations.
 
@@ -65,20 +77,45 @@ No manual path configuration is required for standard installations.
 
 ### From the Explorer Context Menu
 
-Right-click any `.b4a`, `.b4i`, `.b4j`, or `.b4r` file in the Explorer sidebar and choose **Open B4X Project…**
+Right-click any `.b4a`, `.b4i`, `.b4j`, or `.b4r` file in the Explorer sidebar and choose **Open B4X Project**
 
 ### What Happens When You Open a Project
 
 1. The project folder is added to your VS Code workspace
-2. Platform INI files are read and font/theme hints are applied (based on `autoApplyIni` setting)
-3. The `<Libraries>` section of the project file is parsed
-4. Only declared libraries are loaded — XML descriptors are parsed and `.b4xlib` archives are extracted
-5. The LSP language server starts for server-side analysis
-6. IntelliSense is ready
+2. The project file becomes the remembered last-opened project, so a later **Open Folder**, **Open Recent**, or VS Code restart re-points at this file automatically
+3. Platform INI files are read and font/theme hints are applied (based on `autoApplyIni` setting)
+4. The `<Libraries>` section of the project file is parsed
+5. Only declared libraries are loaded — XML descriptors are parsed and `.b4xlib` archives are extracted
+6. The LSP language server starts for server-side analysis
+7. IntelliSense is ready
+
+### Automatic Project Detection
+
+You rarely need the steps above. When a folder is opened (**Open Folder**, **Open Recent**, VS Code restart, or late extension activation), the extension scans the workspace for `.b4a`, `.b4i`, `.b4j`, or `.b4r` files and:
+
+- **One project found:** it becomes the remembered project and the extension loads it automatically. No prompt and no file picker.
+- **Several found:** the first file in scan order (root files first, then each subfolder in directory order) becomes the remembered project. The extension does not ask you to choose, so run **Open B4X Project** if you need a different one.
+- **None found:** stays idle and does nothing.
+
+Detection runs during activation, before any catalog download or provider registration. There is no separate later scan that picks up a project added afterwards, so reload the window after adding a project file to a folder that had none.
 
 ### Session Persistence
 
-The extension remembers your last opened project. When you reopen VS Code, it automatically reloads IntelliSense for that project.
+The extension remembers your last opened project. When you reopen VS Code, it automatically reloads IntelliSense for that project. Opening a different B4X folder overwrites the remembered project with the platform file found there, so a stale project from another window is never reloaded.
+
+---
+
+## Views
+
+The extension contributes one Activity Bar container and one Secondary Sidebar container, both named **B4X Companion**.
+
+| View | Location | Contents |
+|---|---|---|
+| **Projects** | Activity Bar | Flat list of the extension's palette commands with contextual icons. Its title is the loaded project's file name when a project is active, otherwise `projectsViewName` (default `Projects`). When a project is loaded, an **Open in B4A / B4i / B4J / B4R IDE** item is inserted below **Open B4X Project**, and the AI launcher commands are nested under a collapsible **Ollama Launch** node. |
+| **Libraries** | Activity Bar | Platform nodes (B4A, B4i, B4J, B4R) expand to the discovered libraries. Icons show the type: `package` for `.b4xlib` archives, `library` for XML descriptors. Hover for title, author, platform, and type. |
+| **Project Resources** | Secondary Sidebar | Webview dashboard for the current project; opens with **Project Resources** or **Project Statistics**. |
+
+If the **Libraries** view is empty, no library folders were discovered. Check the platform INI files, then run **Doctor / Environment Health Check**.
 
 ---
 
@@ -462,7 +499,7 @@ The **Build & Install Project (B4A / B4J)** command builds your project using th
 
 ### How to Use
 
-1. Press **`Ctrl+Shift+P`** → **B4X: Build & Install Project (B4A / B4J)**
+1. Press **`Ctrl+Shift+P`** → **B4X Companion: Build & Install Project (B4A / B4J)**
 2. If multiple workspace folders exist, select one
 3. The extension detects whether a B4A or B4J project is present:
    - Checks for `B4A` / `B4J` subfolders first
@@ -480,7 +517,7 @@ For B4A builds, the extension auto-detects adb from the Android SDK path in your
 
 Import color themes from your B4A installation into VS Code:
 
-1. Press **`Ctrl+Shift+P`** → **B4X: Import Theme From B4A Install**
+1. Press **`Ctrl+Shift+P`** → **B4X Companion: Import B4X Theme**
 2. The extension reads the `Themes` folder in your B4A install directory
 3. Pick a `.vssettings` theme file
 4. The theme colors are mapped and applied to your VS Code color customizations
@@ -491,21 +528,21 @@ The `b4aInstallPath` setting controls where the extension looks for the B4A inst
 
 ## Device Capture
 
-### Capture GIF from Device
+### Capture GIF
 
 Records a screen capture GIF from a connected Android device:
 
-1. Press **`Ctrl+Shift+P`** → **B4X: Capture GIF from Device**
+1. Press **`Ctrl+Shift+P`** → **B4X Companion: Capture GIF**
 2. The extension uses `adb` for screen capture and `ffmpeg` for GIF conversion
 3. The resulting GIF is saved in your workspace
 
 **Requirements:** `adb` and `ffmpeg` must be available in your PATH or configured in settings.
 
-### Capture Screenshots (Scroll)
+### Capture Screenshot
 
 Captures a sequence of screenshots from a connected device:
 
-1. Press **`Ctrl+Shift+P`** → **B4X: Capture Screenshots (Scroll)**
+1. Press **`Ctrl+Shift+P`** → **B4X Companion: Capture Screenshot**
 2. Screenshots are saved to your workspace
 
 ---
@@ -692,22 +729,100 @@ Items are grouped with visual dividers between Navigation, Format Document/Selec
 
 Open the Command Palette with **`Ctrl+Shift+P`** and type `B4X` to see all available commands.
 
+Every command is prefixed with **`B4X Companion:`** or **`B4X:`** in the palette, so typing `B4X` filters the full list.
+
+### Project & Workspace
+
 | Command | Keybinding | Description |
 |---|---|---|
-| **Open B4X Project…** | — | Select and open a `.b4a` / `.b4i` / `.b4j` / `.b4r` project |
-| **Build & Install Project (B4A / B4J)** | — | Build with platform builder; install APK (B4A) or run JAR (B4J). *Only visible when B4A/B4J project exists* |
-| **Import Theme From B4A Install** | — | Pick and apply a `.vssettings` theme from B4A Themes folder |
-| **Open Extension Settings** | — | Open VS Code Settings filtered to B4X Companion |
-| **Open Documentation** | `Ctrl+Shift+H` | Open this User Manual or the README |
-| **Project Statistics** | — | Open interactive dashboard with project metrics and Chart.js charts |
-| **IntelliSense Health** | — | Check IntelliSense health status |
-| **Open B4X Website** | — | Open b4x.com in an embedded webview |
-| **Capture GIF from Device** | — | Record a GIF from a connected Android device |
-| **Capture Screenshots (Scroll)** | — | Capture screenshot sequence from a connected device |
+| **Open B4X Project** | — | Select and open a `.b4a` / `.b4i` / `.b4j` / `.b4r` project |
+| **New B4X Project from Template** | — | Create a project from a `.b4xtemplate` found in the platform library folders |
+| **Reload B4X Project** | — | Re-read the project file, libraries, and modules for the current platform |
+| **Open in B4X IDE** | — | Open the current project in the native B4X IDE |
+| **Project Resources** | — | Focus the Project Resources dashboard view |
+
+### Build & Device
+
+| Command | Keybinding | Description |
+|---|---|---|
+| **Build & Install Project (B4A / B4J)** | — | Build with the platform builder; install the APK (B4A) or run the JAR (B4J) |
+| **Make .b4xlib** | — | Package selected modules into a `.b4xlib` archive |
+| **Package Additional Libraries** | — | Collect and package additional libraries for distribution |
+| **Start Android Emulator** | — | Launch the Android emulator using `emulatorPath` |
+| **Install B4A-Bridge to Device** | — | Install the B4A-Bridge APK on a connected device |
+| **Capture GIF** | — | Record a GIF from a connected Android device |
+| **Capture Screenshot** | — | Capture a screenshot sequence from a connected device |
+
+### Libraries & Layouts
+
+| Command | Keybinding | Description |
+|---|---|---|
+| **B4X Library Browser** | — | Browse the full library catalog |
+| **Open Library Detail** | — | Show detail for the selected library |
+| **Refresh Library Catalog** | — | Re-fetch the remote catalog and version data |
+| **Layout Designer** | — | Open the `.bjl` / `.bal` layout designer |
+| **Export Layout as JSON** | — | Convert a `.bal` / `.bjl` layout to `.json` |
+| **Import Layout from JSON** | — | Convert a `.json` layout back to `.bal` / `.bjl` |
+### Analysis & Diagnostics
+
+| Command | Keybinding | Description |
+|---|---|---|
 | **Run All Diagnostics** | — | Dump extension state, loaded libraries, and diagnostics to JSON |
-| **Backup Workspace** | — | Create a backup of the current workspace |
+| **IntelliSense Health** | — | Check IntelliSense health status |
+| **Doctor / Environment Health Check** | — | Verify the platform install, INI files, builders, and device tools |
+| **Show Status Summary** | — | Show the current status bar summary in a message |
+| **Debug Extension State** | — | Print internal extension state to the log |
+| **Print Store Counts** | — | Print the number of loaded classes, libraries, and primitives |
+| **Dump Diagnostics to File** | — | Write a full diagnostic dump to a file |
+| **Open Diagnostics File** | — | Open the last diagnostic dump |
+| **Stack Trace** | — | Remap a Java stack trace from a `.b4xlib` back to B4X source |
+| **CodeBundle** | — | Copy an AI context bundle of the current project |
+
+### Editor Tools
+
+| Command | Keybinding | Description |
+|---|---|---|
 | **Extract Method** | — | Extract selected code into a new Sub with inferred parameters |
 | **Insert Event Handler** | — | Generate event handler Sub templates |
+
+### Cache & Maintenance
+
+| Command | Keybinding | Description |
+|---|---|---|
+| **Refresh Library Index** | — | Rebuild the persistent library index |
+| **Show Library DB Path** | — | Show the SQLite library cache location |
+| **Clear Library Cache** | — | Delete the cached library index and rebuild it |
+| **Set Platform Install Path** | — | Point the extension at a non-standard platform install |
+| **Backup Workspace** | — | Create a backup of the current workspace |
+| **Refresh Commands View** | — | Rebuild the Commands view contents |
+
+### Theme, Settings & External
+
+| Command | Keybinding | Description |
+|---|---|---|
+| **Import B4X Theme** | — | Pick and apply a `.vssettings` theme from the B4A Themes folder |
+| **Settings** | — | Open VS Code Settings filtered to B4X Companion |
+| **Open Documentation** | `Ctrl+Shift+H` | Open this User Manual or the README |
+| **Open B4X Website** | — | Open b4x.com in an embedded webview |
+| **Project Statistics** | — | Open the interactive dashboard with project metrics and Chart.js charts |
+
+### AI Assistants
+
+These commands launch a locally installed AI CLI against the Ollama or DeepSeek endpoint configured for your workspace.
+
+| Command | Description |
+|---|---|
+| **Ollama Launch Claude Model** | Start the Claude CLI via Ollama |
+| **Ollama Launch Copilot Model** | Start the Copilot CLI via Ollama |
+| **Ollama Launch OpenCode Model** | Start the OpenCode CLI via Ollama |
+| **Ollama Launch Codex Model** | Start the Codex CLI via Ollama |
+| **DeepSeek TUI Launch** | Start the DeepSeek terminal UI |
+
+### Hidden Commands
+
+These 19 commands are removed from the Command Palette and appear only in the editor context menu (right-click → **B4X Companion**) while a B4X file is active:
+
+`Go to Definition`, `Peek Definition`, `Find All References`, `Rename Symbol`, `Go to Symbol in File`, `Go to Implementation`, `Go to Type Definition`, `Format Document`, `Format Selection`, `Un-Format Document`, `Un-Format Selection`, `Block Comment`, `Un-Block Comment`, `Remove Blank Lines`, `Remove Comments`, `Quick Fix`, `Trigger Suggestions`, `Parameter Hints`, `Search Online`.
 
 ---
 
@@ -724,17 +839,52 @@ All settings are prefixed with **`b4xIntellisense.`** in VS Code Settings.
 | `b4jIniPath` | *(auto-detected)* | Path to B4J `b4xV5.ini`. Leave empty for auto-discovery. |
 | `b4rIniPath` | *(auto-detected)* | Path to B4R `b4xV5.ini`. Leave empty for auto-discovery. |
 | `b4aInstallPath` | `C:\Program Files\Anywhere Software\B4A` | B4A install folder (for theme import and builder). |
+| `b4iInstallPath` | `C:\Program Files (x86)\Anywhere Software\B4i` | B4i install folder (Themes and other assets). |
+| `b4jInstallPath` | `C:\Program Files\Anywhere Software\B4J` | B4J install folder (Themes and other assets). |
+| `b4rInstallPath` | `C:\Program Files\Anywhere Software\B4R` | B4R install folder (Themes and other assets). |
+| `b4aWorkspaceFolder` | *(empty)* | Default folder for new B4A projects created from templates. |
+| `b4iWorkspaceFolder` | *(empty)* | Default folder for new B4i projects created from templates. |
+| `b4jWorkspaceFolder` | *(empty)* | Default folder for new B4J projects created from templates. |
+| `b4rWorkspaceFolder` | *(empty)* | Default folder for new B4R projects created from templates. |
+
+### Builders, Java & Libraries
+
+| Setting | Default | Description |
+|---|---|---|
+| `b4aBuilderPath` | *(auto-detected)* | Path to `B4ABuilder.exe`. Detected from the B4A installation when empty. |
+| `b4jBuilderPath` | *(auto-detected)* | Path to `B4JBuilder.exe`. Detected from the B4J installation when empty. |
+| `b4aJavaPath` | *(auto-detected)* | JDK `javac.exe` or `bin` folder for B4A. Read from `b4xV5.ini` when empty. |
+| `b4iJavaPath` | *(auto-detected)* | JDK `javac.exe` or `bin` folder for B4i. Read from `b4xV5.ini` when empty. |
+| `b4jJavaPath` | *(auto-detected)* | `java.exe` used to run built B4J applications. Detected from B4J settings when empty. |
+| `b4aAdditionalLibrariesFolder` | *(auto-detected)* | Additional B4A external libraries folder. Read from `b4xV5.ini` when empty. |
+| `b4iAdditionalLibrariesFolder` | *(auto-detected)* | Additional B4i external libraries folder. Read from `b4xV5.ini` when empty. |
+| `b4jAdditionalLibrariesFolder` | *(auto-detected)* | Additional B4J external libraries folder. Read from `b4xV5.ini` when empty. |
+| `b4rAdditionalLibrariesFolder` | *(auto-detected)* | Additional B4R external libraries folder. Read from `b4xV5.ini` when empty. |
+| `b4aSharedFolder` | *(auto-detected)* | Shared code modules folder for B4A. Read from `b4xV5.ini` when empty. |
+| `b4iSharedFolder` | *(auto-detected)* | Shared code modules folder for B4i. Read from `b4xV5.ini` when empty. |
+| `b4jSharedFolder` | *(auto-detected)* | Shared code modules folder for B4J. Read from `b4xV5.ini` when empty. |
+| `b4rSharedFolder` | *(auto-detected)* | Shared code modules folder for B4R. Read from `b4xV5.ini` when empty. |
+
+### Device Tools
+
+| Setting | Default | Description |
+|---|---|---|
+| `adbPath` | *(auto-detected)* | Path to `adb.exe`. Detected from the Android SDK via platform INI, or you are prompted on first use. |
+| `emulatorPath` | *(auto-detected)* | Android emulator executable. Empty uses the default Android SDK emulator path. |
+| `ffmpegPath` | *(auto-detected)* | `ffmpeg` executable used for GIF capture. Detected from common install locations when empty. |
 
 ### Behavior
 
 | Setting | Default | Description |
 |---|---|---|
-| `preferLiveSources` | `true` | Prefer live workspace/XML/.b4xlib sources over the bundled API index. |
 | `autoApplyIni` | `prompt` | Font/theme hint application: `prompt`, `always`, or `never`. |
 | `autoAddProjectFolderOnOpen` | `true` | Add project folder as a workspace folder when opening a B4X project. |
 | `autoOpenProjectFolderOnOpen` | `false` | Replace the current workspace with the project folder on open. |
 | `autoLoadProjectAssets` | `true` | Automatically load libraries and start the LSP server after opening a project. |
+| `autoRestoreWorkspace` | `true` | Restore the last active B4X project into the Explorer when launched in an empty window. |
+| `autoBackupEnabled` | `false` | Enable periodic workspace backups at `autoBackupInterval`. |
 | `autoBackupInterval` | `600000` | Auto-backup interval in milliseconds (default: 10 minutes). |
+| `projectsViewName` | `Projects` | Label of the root node in the Projects view. |
 
 ### Extract Method
 
@@ -751,6 +901,12 @@ All settings are prefixed with **`b4xIntellisense.`** in VS Code Settings.
 | `tabSize` | `4` | Tab size for extension webviews. |
 | `wordWrap` | `true` | Word wrap in extension webviews. |
 
+### Library Catalog
+
+| Setting | Default | Description |
+|---|---|---|
+| `googleSheetUrl` | *(B4X community sheet)* | Google Sheets URL used to fetch library data. Leave empty to disable the Google Sheet merge. |
+
 ### Diagnostics & Logging
 
 | Setting | Default | Description |
@@ -760,6 +916,8 @@ All settings are prefixed with **`b4xIntellisense.`** in VS Code Settings.
 | `enableTelemetry` | `false` | Opt-in anonymous telemetry for basic feature usage. |
 | `enableUnusedSubDiagnostics` | `true` | Detect unused Private Subs (Hint) and Public Subs (Warning). |
 | `enableUnusedLibraryDiagnostics` | `true` | Detect unused declared libraries (Information severity). |
+| `enableCodeSmellDiagnostics` | `true` | Detect B4X anti-patterns (`DoEvents`, `File.DirDefaultExternal`, `Map.GetKeyAt`, `Cursor`, raw SQL string concatenation). |
+| `enableCompilerWarnings` | `true` | Show real-time compiler warnings: unreachable code, missing return types, missing screen units, deprecated APIs. |
 
 ---
 
@@ -793,12 +951,19 @@ If your installation is non-standard, override any path in **Settings → B4X Co
 
 ## Troubleshooting
 
+### Nothing Happens When VS Code Starts
+
+The extension stays idle unless the workspace contains a `.b4a`, `.b4i`, `.b4j`, or `.b4r` file, either in the folder root or one level down (for example inside `B4A/`). With no platform file there is no status bar item, no completions, no library download, and no template scan. This is the [activation gate](#activation-gate) working as designed.
+
+Fix: add a B4X project file to the folder, then reload the window with **`Ctrl+Shift+P`** → **Developer: Reload Window**. VS Code does not re-run activation when files are added, so a reload is required.
+
 ### No IntelliSense / Empty Completions
 
-1. Ensure you have opened a project via **Open B4X Project…** (not just opened a folder)
-2. Check that your B4X platform is installed and the INI file exists at `%APPDATA%\Anywhere Software\`
-3. Open **Run All Diagnostics** to see which libraries and classes were loaded
+1. Confirm the workspace contains a platform file. If it does not, the activation gate keeps the extension idle; see [Nothing Happens When VS Code Starts](#nothing-happens-when-vs-code-starts)
+2. If a project is loaded, check that your B4X platform is installed and the INI file exists at `%APPDATA%\Anywhere Software\`
+3. Open **Run All Diagnostics** to see which libraries and classes were loaded, or **IntelliSense Health** for a status summary
 4. If using a non-standard install, set the INI path manually in Settings
+5. Reload the window after changing library paths or the project file
 
 ### "B4A folder not found" When Building
 

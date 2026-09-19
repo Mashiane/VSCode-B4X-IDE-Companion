@@ -3,7 +3,7 @@
 > **Comprehensive IDE companion for the B4X family (B4A, B4i, B4J, B4R)** — IntelliSense · LSP · Type Inference · Diagnostics · Code Actions · Formatting · Theme Import · Project Management
 
 ![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A51.95-blue)
-![Version](https://img.shields.io/badge/version-0.1.418-green)
+![Version](https://img.shields.io/badge/version-0.1.483-green)
 ![Platforms](https://img.shields.io/badge/platforms-B4A%20%7C%20B4i%20%7C%20B4J%20%7C%20B4R-orange)
 
 ---
@@ -13,6 +13,10 @@
 **VS Code B4X IDE Companion** brings the B4X development experience into Visual Studio Code. It provides a full developer toolkit including a local Language Server Protocol (LSP) backend, fast workspace indexer, cross-file type inference, structural code formatting, persistent SQLite-backed library caching, and server-side refactoring — all designed to work offline-first with your existing B4X installation.
 
 The extension **auto-discovers** platform INI configuration files for all four B4X platforms from `%APPDATA%\Anywhere Software\`, so library paths, additional libraries folders, fonts, and themes are picked up automatically without manual settings.
+
+It stays idle unless the open workspace actually contains a B4X project. On activation it scans the workspace (root plus one level of subfolders such as `B4A/`, `B4i/`, `B4J/`, `B4R/`) for a `.b4a`, `.b4i`, `.b4j`, or `.b4r` file. With no platform file it does nothing: no downloads, no providers, no status activity. With one found, that file becomes the remembered last-opened project and full activation continues, so **Open Folder**, **Open Recent**, VS Code restart, and late activation all behave the same way. If several are found, the first in scan order wins.
+
+See [Getting Started](docs/manual.md#getting-started) and [Opening a Project](docs/manual.md#opening-a-project) in the user manual for the full activation flow.
 
 ---
 
@@ -115,8 +119,9 @@ The extension **auto-discovers** platform INI configuration files for all four B
 | Feature | Description |
 |---|---|
 | **Open B4X Project** | File picker for `.b4a`, `.b4i`, `.b4j`, `.b4r` — loads workspace and libraries |
+| **Automatic Detection** | Opening a folder scans for platform files: the first one found opens automatically and becomes the remembered project. With several files the first in scan order wins. None keeps the extension idle |
 | **Auto Workspace Setup** | Automatically adds/opens project folder in VS Code on project open |
-| **Session Persistence** | Remembers last opened project and auto-reloads IntelliSense on next launch |
+| **Session Persistence** | Remembers last opened project and auto-reloads IntelliSense on next launch; opening another B4X folder re-points it |
 | **Build & Install** | One-command build for B4A/B4J (auto-detects platform, installs APK on device) |
 | **Auto-backup** | Periodic backup of project folder when AutoBackup=True in system INI |
 | **Main Module Sync** | Edits to generated Main `.b4x` are synced back to the project file |
@@ -134,8 +139,8 @@ The extension **auto-discovers** platform INI configuration files for all four B
 
 | Feature | Description |
 |---|---|
-| **Capture GIF from Device** | Record a GIF from a connected Android device via adb + ffmpeg |
-| **Capture Screenshots** | Capture a sequence of screenshots from a connected device |
+| **Capture GIF** | Record a GIF from a connected Android device via adb + ffmpeg |
+| **Capture Screenshot** | Capture a sequence of screenshots from a connected device |
 | **IntelliSense Diagnostics** | Dump full diagnostic JSON showing loaded libraries, classes, and resolution |
 | **IntelliSense Health** | Check IntelliSense health status in the tree view |
 | **Project Statistics** | Interactive dashboard with stat cards, per-module table, and Chart.js charts (line composition, top 10 subroutines, top 10 module size breakdown) |
@@ -198,8 +203,10 @@ These items are **hidden from the Command Palette** (`Ctrl+Shift+P`) — they on
 
 ## Quick Start
 
+> **Note:** If the folder you open already contains a `.b4a`, `.b4i`, `.b4j`, or `.b4r` file, the extension detects it and opens the project automatically, so you can skip steps 2 and 3.
+
 1. **Install** the extension from the VS Code Marketplace (or load the `.vsix` manually).
-2. Open VS Code and run **`Ctrl+Shift+P`** → **B4X Companion: Open B4X Project…**
+2. Open VS Code and run **`Ctrl+Shift+P`** → **B4X Companion: Open B4X Project**
 3. Select your `.b4a`, `.b4i`, `.b4j`, or `.b4r` project file.
 4. The extension will:
    - Add the project folder to your workspace
@@ -213,24 +220,40 @@ These items are **hidden from the Command Palette** (`Ctrl+Shift+P`) — they on
 
 ---
 
-## Commands
+## Views
+
+Two **B4X Companion** containers are contributed:
+
+| View | Location | Contents |
+|---|---|---|
+| **Projects** | Activity Bar | Palette commands with contextual icons. Title shows the loaded project name, or `projectsViewName` when idle. Includes an **Open in B4X IDE** item and a collapsible **Ollama Launch** node |
+| **Libraries** | Activity Bar | Platform nodes (B4A, B4i, B4J, B4R) expanding to discovered libraries, with `package` / `library` icons and title, author, platform, and type tooltips |
+| **Project Resources** | Secondary Sidebar | Webview dashboard for the current project |
+
+---
+
+## Key Commands
 
 | Command | Keybinding | Description |
 |---|---|---|
-| **Open B4X Project…** | | Select and open a B4X project file |
+| **Open B4X Project** | | Select and open a B4X project file |
+| **New B4X Project from Template** | | Create a project from a `.b4xtemplate` in the platform library folders |
 | **Build & Install Project** | | Build via B4ABuilder.exe/B4JBuilder.exe and install to device |
-| **Import Theme From B4X Install** | | Pick and import a `.vssettings` theme from B4X Themes/ |
-| **Open Extension Settings** | | Open VS Code Settings filtered to B4X Companion |
+| **Import B4X Theme** | | Pick and import a `.vssettings` theme from B4X Themes/ |
+| **Settings** | | Open VS Code Settings filtered to B4X Companion |
 | **Open Documentation** | `Ctrl+Shift+H` | Open the README or User Manual |
 | **Project Statistics** | | Open interactive dashboard with project metrics and charts |
 | **IntelliSense Health** | | Check IntelliSense health status |
+| **Doctor / Environment Health Check** | | Verify platform install, INI files, builders, and device tools |
 | **Open B4X Website** | | Open b4x.com in an embedded webview |
-| **Capture GIF from Device** | | Record a GIF from a connected Android device |
-| **Capture Screenshots (Scroll)** | | Capture screenshot sequence from device |
+| **Capture GIF** | | Record a GIF from a connected Android device |
+| **Capture Screenshot** | | Capture a screenshot sequence from device |
 | **Run All Diagnostics** | | Dump state, stores, and diagnostics to JSON |
 | **Backup Workspace** | | Create a backup of the current workspace |
 | **Extract Method** | | Extract selected code into a new Sub with inferred parameters |
 | **Insert Event Handler** | | Generate event handler Sub templates |
+
+> **Note:** The extension contributes 65 commands, including layout designer, `.b4xlib` packaging, emulator launch, stack trace remapping, and AI CLI launchers. See the [User Manual](docs/manual.md#commands-reference) for the full list.
 
 > **Note:** Some commands are hidden from the Command Palette and are only accessible via the editor context menu (right-click → B4X Companion). These include navigation commands (Go to Definition, Find References, etc.), formatting commands, and utility commands. Technical maintenance commands (Refresh Library Index, Clear Library Cache, Set Platform Install Path) are also hidden to reduce clutter.
 
@@ -250,11 +273,31 @@ All settings are prefixed with `b4xIntellisense.` in VS Code.
 | `b4iInstallPath` | `C:\Program Files (x86)\Anywhere Software\B4i` | B4i installation folder. |
 | `b4jInstallPath` | `C:\Program Files\Anywhere Software\B4J` | B4J installation folder. |
 | `b4rInstallPath` | `C:\Program Files\Anywhere Software\B4R` | B4R installation folder. |
+| `b4aWorkspaceFolder` | *(empty)* | Default folder for new B4A projects created from templates. |
+| `b4iWorkspaceFolder` | *(empty)* | Default folder for new B4i projects created from templates. |
+| `b4jWorkspaceFolder` | *(empty)* | Default folder for new B4J projects created from templates. |
+| `b4rWorkspaceFolder` | *(empty)* | Default folder for new B4R projects created from templates. |
+| `b4aBuilderPath` | *(auto-detected)* | Path to `B4ABuilder.exe`. |
+| `b4jBuilderPath` | *(auto-detected)* | Path to `B4JBuilder.exe`. |
+| `b4aJavaPath` | *(auto-detected)* | JDK `javac.exe` or `bin` folder for B4A. |
+| `b4iJavaPath` | *(auto-detected)* | JDK `javac.exe` or `bin` folder for B4i. |
+| `b4jJavaPath` | *(auto-detected)* | `java.exe` used to run built B4J applications. |
+| `b4aAdditionalLibrariesFolder` | *(auto-detected)* | Additional B4A external libraries folder. |
+| `b4iAdditionalLibrariesFolder` | *(auto-detected)* | Additional B4i external libraries folder. |
+| `b4jAdditionalLibrariesFolder` | *(auto-detected)* | Additional B4J external libraries folder. |
+| `b4rAdditionalLibrariesFolder` | *(auto-detected)* | Additional B4R external libraries folder. |
+| `b4aSharedFolder` | *(auto-detected)* | Shared code modules folder for B4A. |
+| `b4iSharedFolder` | *(auto-detected)* | Shared code modules folder for B4i. |
+| `b4jSharedFolder` | *(auto-detected)* | Shared code modules folder for B4J. |
+| `b4rSharedFolder` | *(auto-detected)* | Shared code modules folder for B4R. |
 | `autoApplyIni` | `prompt` | Font/theme hint application: `prompt`, `always`, or `never`. |
 | `autoAddProjectFolderOnOpen` | `true` | Add project folder as workspace folder on Open B4X Project. |
 | `autoOpenProjectFolderOnOpen` | `false` | Replace workspace with project folder on Open B4X Project. |
 | `autoLoadProjectAssets` | `true` | Automatically load libraries and start LSP after opening a project. |
 | `autoBackupInterval` | `600000` | Auto-backup interval in ms (default 10 minutes). |
+| `autoBackupEnabled` | `false` | Enable periodic workspace backups at `autoBackupInterval`. |
+| `autoRestoreWorkspace` | `true` | Restore the last active B4X project into the Explorer when launched in an empty window. |
+| `projectsViewName` | `Projects` | Label of the root node in the Projects view. |
 | `extractMethod.previewBehavior` | `prompt` | Extract Method: `prompt`, `autoApply`, or `alwaysPreview`. |
 | `fontFamily` | `Fira Code Retina` | Font family for extension webviews. |
 | `fontSize` | `12` | Font size (px) for extension webviews. |
@@ -265,8 +308,12 @@ All settings are prefixed with `b4xIntellisense.` in VS Code.
 | `enableTelemetry` | `false` | Opt-in anonymous telemetry for basic feature usage. |
 | `adbPath` | *(auto-detected)* | Path to the adb executable for device operations. |
 | `ffmpegPath` | *(auto-detected)* | Path to the ffmpeg executable for GIF capture. |
+| `emulatorPath` | *(auto-detected)* | Android emulator executable. Empty uses the default Android SDK path. |
 | `enableUnusedSubDiagnostics` | `true` | Detect unused Private (Hint) and Public (Warning) Subroutines. |
 | `enableUnusedLibraryDiagnostics` | `true` | Detect unused declared libraries (Information severity). |
+| `enableCodeSmellDiagnostics` | `true` | Detect B4X anti-patterns (`DoEvents`, `File.DirDefaultExternal`, `Map.GetKeyAt`, `Cursor`, raw SQL string concatenation). |
+| `enableCompilerWarnings` | `true` | Show real-time compiler warnings (unreachable code, missing return types, missing screen units, deprecated APIs). |
+| `googleSheetUrl` | *(B4X community sheet)* | Google Sheets URL for library data. Leave empty to disable the Sheet merge. |
 
 ---
 
@@ -274,7 +321,7 @@ All settings are prefixed with `b4xIntellisense.` in VS Code.
 
 ### Platform Discovery
 
-On activation (or when a project is opened), the extension scans `%APPDATA%\Anywhere Software\` for each platform's INI file:
+Once a workspace containing a B4X project file is active, the extension scans `%APPDATA%\Anywhere Software\` for each platform's INI file:
 
 | Platform | AppData Folder | INI File |
 |---|---|---|
@@ -444,7 +491,18 @@ test/
 
 ## Release Notes
 
-See [CHANGELOG.md](https://github.com/Mashiane/VSCode-B4X-IDE-Companion/blob/HEAD/CHANGELOG.md) for full release history.
+See [CHANGELOG.md](CHANGELOG.md) for full release history.
+
+### 0.1.483
+
+- **Activation Gate**: The workspace is scanned for a `.b4a`, `.b4i`, `.b4j`, or `.b4r` file (folder root, then one level down) before any other work begins. With no platform file, the extension registers only **Open B4X Project** and **New B4X Project from Template**, hides the status bar item, and returns. No catalog download, no library providers, no template scan, no message popups
+- **Project Detection on Folder Change**: `Open Folder`, `Open Recent`, window restart, and late activation now follow one path. The first platform file found becomes the remembered project and overwrites a stale project from another folder, so the automatic reload can no longer target the wrong workspace
+- **Fixed Template Scan Stall**: `Loading templates...` could remain in the status bar indefinitely when a folder was opened without a B4X project. The scan now clears its own status when it completes, uses async `fs.promises.stat` instead of blocking `existsSync`, isolates per-folder read errors so one bad folder cannot stop the scan, and runs detached from activation
+- **Documentation**: User manual and README refreshed. All 49 settings and all 65 commands are now documented, the non-existent `preferLiveSources` setting was removed, a **Views** section was added, and the troubleshooting entries were rewritten for the activation gate
+- **Marketplace Changelog Tab**: `CHANGELOG.md` now ships inside the package instead of being excluded by `.vscodeignore`, so the Marketplace changelog tab is populated. `scripts/verify-vsix.js` warns when the file is missing from a package
+- **Marketplace License**: `package.json` now declares `"license": "CC0-1.0"`, matching the `LICENSE` file that already shipped, so the listing can display license information
+
+Interim builds between 0.1.418 and 0.1.483 are not catalogued here.
 
 ### 0.1.418
 
@@ -536,8 +594,8 @@ Initial release with core IntelliSense features.
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/Mashiane/VSCode-B4X-IDE-Companion/blob/HEAD/CONTRIBUTING.md) for development setup and guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-See [LICENSE](https://github.com/Mashiane/VSCode-B4X-IDE-Companion/blob/HEAD/LICENSE) for details.
+See [LICENSE](LICENSE) for details.
